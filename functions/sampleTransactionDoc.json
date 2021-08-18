@@ -1,0 +1,18 @@
+{
+  "amount": 4000,
+  "claimantId": "Iw5aBWchYScpP8c0eoStQxztAlp1",
+  "author": "aPdn5m3oRnXcMfS3ZdSoYftMfds2",
+  "live": true,
+  "claimant": {
+    "strapID": "1157001357653622784",
+    "uid": "ms9vriAgCufQUFLFylNXi2Q7xOn1"
+  },
+  "strapType": "twitter",
+  "twitter": {
+    "tid": 3774747575,
+    "handle": "@Bobnzelu"
+  },
+  "subvend": "350074157410792",
+  "uid": "ms9vriAgCufQUFLFylNXi2Q7xOn1",
+  "vend": "3fRAgHUvFYO5NCe2auFF"
+}
