@@ -1,13 +1,20 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const firestoreDb = admin.firestore();
+const crypto = require("crypto");
 
 exports.createTransactionDoc = functions.https.onRequest(async (req, res) => {
   try {
     console.log(req.query);
+    const hashData = `${req.query.uid}${req.query.vend}`;
+
+    const booleanObjectId = crypto
+      .createHash("sha256")
+      .update(hashData)
+      .digest("hex");
+    console.log("boolean id " + booleanObjectId);
     const docObject = {
       amount: req.query.amount ? req.query.amount : "",
-      claimantId: req.query.claimantId ? req.query.claimantId : "",
       author: req.query.author ? req.query.author : "",
       live: req.query.live ? !!req.query.live : "",
       claimant: {
@@ -19,6 +26,7 @@ exports.createTransactionDoc = functions.https.onRequest(async (req, res) => {
         tid: req.query.tid ? req.query.tid : "",
         handle: req.query.handle ? req.query.handle : "",
       },
+      concat: booleanObjectId,
       subvend: req.query.subvend ? req.query.subvend : "",
       uid: req.query.uid ? req.query.uid : "",
       vend: req.query.vend ? req.query.vend : "",

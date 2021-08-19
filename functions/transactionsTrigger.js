@@ -4,7 +4,6 @@ const realtimeDb = admin.database();
 const firestoreDb = admin.firestore();
 const ref = realtimeDb.ref();
 // const {CloudTasksClient} = require("@google-cloud/tasks");
-const crypto = require("crypto");
 
 const logErrorInCollection = async (
   vendId,
@@ -14,14 +13,12 @@ const logErrorInCollection = async (
   logKey = null
 ) => {
   if (!logKey) {
-    console.log("writng to sub collection");
-    console.log({vendId, claimantId, subvendId});
     return await firestoreDb
       .collection("vends")
       .doc(vendId)
       .collection("sessions")
       .doc(claimantId)
-      .collection("subvends")
+      .collection("subVend")
       .doc(subvendId)
       .collection("logs")
       .add(data);
@@ -31,7 +28,7 @@ const logErrorInCollection = async (
     .doc(vendId)
     .collection("sessions")
     .doc(claimantId)
-    .collection("subvends")
+    .collection("subVend")
     .doc(subvendId)
     .collection("logs")
     .doc(logKey)
@@ -48,7 +45,9 @@ const checkVendDocumentHasBeenTampered = async (vendId) => {
   const vendDoc = await firestoreDb.collection("vends").doc(`${vendId}`).get();
   const vendlyDoc = await firestoreDb
     .collection("vendly")
-    .doc(`vendinator/vends/${vendId}`)
+    .doc("vendinator")
+    .collection("vends")
+    .doc(vendId)
     .get();
   const vendlyDocCreateTime = vendlyDoc.createTime;
   const vendDocUpdateTime = vendDoc.updateTime;
@@ -62,7 +61,9 @@ const checkVendDocumentHasBeenTampered = async (vendId) => {
 const checkVendSessionStatusIsWon = async (vendId, claimantId) => {
   const vendSessionDoc = await firestoreDb
     .collection("vends")
-    .doc(`${vendId}/sessions/${claimantId}`)
+    .doc(vendId)
+    .collection("sessions")
+    .doc(claimantId)
     .get();
   const vendSessionDocData = vendSessionDoc.data();
 
@@ -74,7 +75,11 @@ const checkVendSessionStatusIsWon = async (vendId, claimantId) => {
 const checkForUserInStrap = async (strapType, strapId, vendId) => {
   const strapDoc = await firestoreDb
     .collection("vends")
-    .doc(`${vendId}/straps/meta/${strapType}/${strapId}`)
+    .doc(vendId)
+    .collection("straps")
+    .doc("meta")
+    .collection(strapType)
+    .doc(strapId)
     .get();
   if (!strapDoc.exists) {
     return false;
@@ -84,7 +89,11 @@ const checkForUserInStrap = async (strapType, strapId, vendId) => {
 const checkForValueOfIsWonInUserStrap = async (strapType, strapId, vendId) => {
   const strapDoc = await firestoreDb
     .collection("vends")
-    .doc(`${vendId}/straps/meta/${strapType}/${strapId}`)
+    .doc(vendId)
+    .collection("straps")
+    .doc("meta")
+    .collection(strapType)
+    .doc(strapId)
     .get();
   const strapData = strapDoc.data();
 
@@ -96,12 +105,9 @@ exports.transactionsTrigger = functions.firestore
   .onCreate(async (snap) => {
     const transactionDocument = snap.data();
 
-    const booleanObjectId = crypto
-      .createHash("sha256")
-      .update(`${transactionDocument.claimant.uid}${transactionDocument.vend}`)
-      .digest("hex");
+    const booleanObjectId = transactionDocument.concat;
     const booleanObjectRef = ref.child(
-      `vends/${transactionDocument.vend}}/knocks/attempts/${booleanObjectId}/subvend/backend`
+      `vends/${transactionDocument.vend}/knocks/attempts/${booleanObjectId}/subvend/backend`
     );
 
     console.log("boolean id " + booleanObjectId);
@@ -160,6 +166,8 @@ exports.transactionsTrigger = functions.firestore
             transactionDocument.subvend,
             errorData
           );
+          await booleanObjectRef.update({boolean: false});
+
           console.log("Vend no longer active");
           return;
         }
@@ -168,7 +176,7 @@ exports.transactionsTrigger = functions.firestore
           const userInStrap = await checkForUserInStrap(
             transactionDocument.strapType,
             transactionDocument.claimant.strapID,
-            transactionDocument.subvend
+            transactionDocument.vend
           );
 
           if (!userInStrap) {
@@ -199,7 +207,7 @@ exports.transactionsTrigger = functions.firestore
           const strapIsWonValue = await checkForValueOfIsWonInUserStrap(
             transactionDocument.strapType,
             transactionDocument.claimant.strapID,
-            transactionDocument.subvend
+            transactionDocument.vend
           );
 
           if (strapIsWonValue) {
@@ -278,9 +286,11 @@ exports.transactionsTrigger = functions.firestore
               });
             await firestoreDb
               .collection("users")
-              .doc(
-                `${transactionDocument.claimant.uid}/myVends/created/vends/${transactionDocument.vend}`
-              )
+              .doc(transactionDocument.claimant.uid)
+              .collection("myVends")
+              .doc("created")
+              .collection("vends")
+              .doc(transactionDocument.vend)
               .update({
                 state: admin.firestore.FieldValue.arrayUnion({
                   date: fireStoreDate,
@@ -346,6 +356,7 @@ exports.transactionsTrigger = functions.firestore
         `${timestamp}_pay`
       );
       await booleanObjectRef.update({boolean: false});
+      console.log("Unknown error occured");
       return;
     }
   });
