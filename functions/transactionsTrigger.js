@@ -51,8 +51,9 @@ const checkVendDocumentHasBeenTampered = async (vendId) => {
     .get();
   const vendlyDocCreateTime = vendlyDoc.createTime;
   const vendDocUpdateTime = vendDoc.updateTime;
+  let timeCheck = vendlyDocCreateTime.isEqual(vendDocUpdateTime);
 
-  if (vendDocUpdateTime == vendlyDocCreateTime) {
+  if (timeCheck) {
     return {checkResult: false, vendDocUpdateTime, vendlyDocCreateTime};
   }
   return {checkResult: true, vendDocUpdateTime, vendlyDocCreateTime};
@@ -247,10 +248,16 @@ exports.transactionsTrigger = functions.firestore
           );
 
           if (vendDocumentTampered.checkResult) {
+            const formattedVenDocDate =
+              vendDocumentTampered.vendDocUpdateTime.toDate();
+            const formattedVendlyDocDate =
+              vendDocumentTampered.vendlyDocCreateTime.toDate();
+            console.log("vend has been tampered with");
             console.log({
-              vendDocUpdateTime: vendDocumentTampered.vendDocUpdateTime,
-              vendlyCreateTime: vendDocumentTampered.vendlyDocCreateTime,
+              vendDocUpdateTime: formattedVenDocDate,
+              vendlyCreateTime: formattedVendlyDocDate,
             });
+
             const timestamp = Date.now();
             const fireStoreDate = admin.firestore.Timestamp.fromDate(
               new Date(timestamp)
@@ -301,6 +308,15 @@ exports.transactionsTrigger = functions.firestore
             await booleanObjectRef.update({boolean: false});
             return;
           }
+          const formattedVenDocDate =
+            vendDocumentTampered.vendDocUpdateTime.toDate();
+          const formattedVendlyDocDate =
+            vendDocumentTampered.vendlyDocCreateTime.toDate();
+          console.log("vend has not been tampered with");
+          console.log({
+            vendDocUpdateTime: formattedVenDocDate,
+            vendlyCreateTime: formattedVendlyDocDate,
+          });
           const vendSessionStatusCheck = await checkVendSessionStatusIsWon(
             transactionDocument.vend,
             transactionDocument.claimant.uid
@@ -327,10 +343,12 @@ exports.transactionsTrigger = functions.firestore
               errorData,
               `${timestamp}_pay`
             );
+            console.log("Vendsession is NOT equal to won");
+            await booleanObjectRef.update({boolean: false});
+            return;
           }
-          console.log("Vendsession is NOT equal to won");
-          await booleanObjectRef.update({boolean: false});
-          return;
+
+          console.log("Vendession status = won");
         }
       });
     } catch (error) {
