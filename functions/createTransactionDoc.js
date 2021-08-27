@@ -17,17 +17,45 @@ exports.createTransactionDoc = functions.https.onRequest(async (req, res) => {
       .digest("hex");
     console.log("boolean id " + booleanObjectId);
     const docObject = {
-      amount: req.query.amount ? req.query.amount : "",
+      amount: req.query.amount ? Number(req.query.amount) : "",
       author: req.query.author ? req.query.author : "",
-      live: req.query.live ? !!req.query.live : "",
+      charity: req.query.charity ? req.query.charity : "",
       claimant: {
         strapID: req.query.strapId ? req.query.strapId : "",
         uid: req.query.uid ? req.query.uid : "",
       },
+
+      country: req.query.country ? req.query.country : "",
+      alias: req.query.alias ? req.query.alias : "",
+      currency: req.query.currency ? req.query.currency : "",
+      phoneRef: req.query.phoneRef ? req.query.phoneRef : "",
+      raw: req.query.raw ? Number(req.query.raw) : "",
+      sessionID: req.query.sessionID ? req.query.sessionID : "",
+      transmission: req.query.transmission ? req.query.transmission : "",
+      type: req.query.type ? req.query.type : "",
+      giftCard: {
+        amount: req.query.giftCardAmount
+          ? Number(req.query.giftCardAmount)
+          : "",
+        id: req.query.giftCardId ? req.query.giftCardId : "",
+      },
+      operatorID: req.query.operatorID ? req.query.operatorID : "",
+
+      domain: req.query.domain ? req.query.domain : "",
+      email: req.query.email ? req.query.email : "",
+      defaultCurrency: req.query.defaultCurrency
+        ? req.query.defaultCurrency
+        : "",
       strapType: req.query.strapType ? req.query.strapType : "",
+
       twitter: {
         tid: req.query.tid ? req.query.tid : "",
         handle: req.query.handle ? req.query.handle : "",
+      },
+      bank: {
+        acctName: req.query.bankAcctName ? req.query.bankAcctName : "",
+        branchCode: req.query.bankBranchCode ? req.query.bankBranchCode : "",
+        ref: req.query.bankRef ? req.query.bankRef : "",
       },
       concat: booleanObjectId,
       subvend: req.query.subvend ? req.query.subvend : "",

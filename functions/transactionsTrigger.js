@@ -1,4 +1,3 @@
-global.triggerDocument = null;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const realtimeDb = admin.database();
@@ -8,8 +7,11 @@ const {
   handleBankTransmission,
   handleCharityTransmission,
   handleRevendTransmission,
+  handleGiftCardTransmission,
+  handleMobileMoneyTransmission,
+  handleAirtimeTransmission,
 } = require("./helpers/transmission");
-const logErrorInCollection = require("./helpers/shared");
+const {logErrorInCollection} = require("./helpers/shared");
 
 // const {CloudTasksClient} = require("@google-cloud/tasks");
 
@@ -22,7 +24,6 @@ const checkVendActiveStatus = async (vendDocResult) => {
 
 const checkVendDocumentHasBeenTampered = async (vendId) => {
   const vendDoc = await firestoreDb.collection("vends").doc(`${vendId}`).get();
-  global.vendDoc = vendDoc;
   const vendlyDoc = await firestoreDb
     .collection("vendly")
     .doc("vendinator")
@@ -49,9 +50,15 @@ const handleTransactionDocumentTransmission = async (transmission) => {
       return await handleBankTransmission();
     case "charity":
       return await handleCharityTransmission();
+    case "giftCard":
+      return await handleGiftCardTransmission();
+    case "MM":
+      return await handleMobileMoneyTransmission();
+    case "airtime":
+      return await handleAirtimeTransmission();
 
     default:
-      break;
+      throw Error(`${transmission} is an invalid transmission type`);
   }
 };
 
@@ -97,10 +104,17 @@ const checkForValueOfIsWonInUserStrap = async (strapType, strapId, vendId) => {
   return strapData.isWon;
 };
 
-exports.transactionsTrigger = functions.firestore
-  .document("transactions/payouts/records/{trigger}")
-  .onCreate(async (snap) => {
+const runtimeOpts = {
+  timeoutSeconds: 300,
+  memory: "2GB",
+};
+
+exports.transactionsTrigger = functions
+  .runWith(runtimeOpts)
+  .firestore.document("transactions/payouts/records/{trigger}")
+  .onCreate(async (snap, context) => {
     const transactionDocument = snap.data();
+    global.triggerDocId = context.params.trigger;
 
     global.triggerDocument = transactionDocument;
     const booleanObjectId = transactionDocument.concat;
@@ -117,10 +131,10 @@ exports.transactionsTrigger = functions.firestore
         .doc(`${transactionDocument.vend}`)
         .get();
       const vendDocResult = vendDoc.data();
+      global.vendDoc = vendDocResult;
 
-      const booleanObject = booleanObjectRef.once("value", (snapshot) => {
-        return snapshot.val();
-      });
+      const booleanRef = await booleanObjectRef.once("value");
+      const booleanObject = booleanRef.val();
       if (!booleanObject.boolean) {
         const timestamp = Date.now();
         const fireStoreDate = admin.firestore.Timestamp.fromDate(
@@ -139,10 +153,12 @@ exports.transactionsTrigger = functions.firestore
           transactionDocument.vend,
           transactionDocument.claimant.uid,
           transactionDocument.subvend,
-          errorData
+          errorData,
+          `${timestamp}_paid`
         );
 
         console.log("Boolean False.Unable to proceed");
+        console.log("Boolean value = " + booleanObject.boolean);
         return;
       }
       console.log("Boolean True");
@@ -165,7 +181,8 @@ exports.transactionsTrigger = functions.firestore
           transactionDocument.vend,
           transactionDocument.claimant.uid,
           transactionDocument.subvend,
-          errorData
+          errorData,
+          `${timestamp}_paid`
         );
         await booleanObjectRef.update({boolean: false});
 
@@ -378,6 +395,8 @@ exports.transactionsTrigger = functions.firestore
       );
       await booleanObjectRef.update({boolean: false});
       console.log("Unknown error occured");
+      console.log(error);
+
       return;
     }
   });
