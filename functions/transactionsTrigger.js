@@ -23,6 +23,8 @@ const checkVendActiveStatus = async (vendDocResult) => {
 };
 
 const checkVendDocumentHasBeenTampered = async (vendId) => {
+  console.log("checking if  vend has been tampered");
+  console.log("vendId is " + vendId);
   const vendDoc = await firestoreDb.collection("vends").doc(`${vendId}`).get();
   const vendlyDoc = await firestoreDb
     .collection("vendly")
@@ -30,6 +32,16 @@ const checkVendDocumentHasBeenTampered = async (vendId) => {
     .collection("vends")
     .doc(vendId)
     .get();
+  if (vendDoc.exists()) {
+    console.log("vend doc exists");
+  } else {
+    console.log("vend doc doesn't exist");
+  }
+  if (vendlyDoc.exists()) {
+    console.log("vendly doc exists");
+  } else {
+    console.log("vendly doc doesn't exist");
+  }
   const vendlyDocCreateTime = vendlyDoc.createTime;
   const vendDocUpdateTime = vendDoc.updateTime;
   let timeCheck = vendlyDocCreateTime.isEqual(vendDocUpdateTime);

@@ -51,6 +51,8 @@ exports.calculateChargeAmount = async (
       Number(rawAmount) >= Number(chargeObject[tier].lowerLimit) &&
       Number(rawAmount) <= Number(chargeObject[tier].upperLimit)
     ) {
+      console.log("tier is " + tier);
+      console.log("type is " + chargeObject[tier].type);
       switch (chargeObject[tier].type) {
         case "flat":
           chargeAmount = Number(chargeObject[tier].amount);
@@ -66,7 +68,7 @@ exports.calculateChargeAmount = async (
     }
   }
 
-  const convertedAmount = Number(rawAmount) * Number(conversionRate);
+  const convertedAmount = Number(rawAmount) / Number(conversionRate);
 
   const evaluatedAmount = convertedAmount - chargeAmount;
   console.log("raw amount " + rawAmount);

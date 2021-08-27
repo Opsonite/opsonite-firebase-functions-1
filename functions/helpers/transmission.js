@@ -26,7 +26,7 @@ exports.handleBankTransmission = async () => {
   let conversionRate = await conversionRef.once("value");
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/bank/charges`
+    `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
   );
   const bankDetails = global.triggerDocument.bank.ref.split("_");
   let reference = `${global.triggerDocument.vend}_${Date.now()}`;
@@ -130,7 +130,7 @@ exports.handleCharityTransmission = async () => {
   const conversionReference = await conversionRef.once("value");
   const conversionRate = conversionReference.val();
   const chargeDocumentRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/bank/charges`
+    `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
   );
 
   const bankDetails = charityData.bankRef.split("_");
@@ -395,7 +395,7 @@ exports.handleMobileMoneyTransmission = async () => {
   let conversionRate = await conversionRef.once("value");
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/bank/charges`
+    `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
   );
   let reference = `${global.triggerDocument.vend}${Date.now()}`;
 
@@ -523,7 +523,7 @@ exports.handleAirtimeTransmission = async () => {
   let conversionRate = await conversionRef.once("value");
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/bank/charges`
+    `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
   );
 
   console.log(`Country is ${global.triggerDocument.country}`);
