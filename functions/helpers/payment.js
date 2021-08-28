@@ -69,7 +69,7 @@ exports.calculateChargeAmount = async (
   }
 
   const convertedAmount = Number(rawAmount) / Number(conversionRate);
-
+  global.chargeAmount = chargeAmount;
   const evaluatedAmount = convertedAmount - chargeAmount;
   console.log("raw amount " + rawAmount);
   console.log("converted amount " + convertedAmount);
@@ -162,6 +162,9 @@ exports.makePaystackPayment = async (
         createdAt: fireStoreDate,
         timestamp,
         receipt: {
+          ...(typeof global.chargeAmount !== "undefined" && {
+            charge: global.chargeAmount,
+          }),
           amount: initiateTransferResponse.data.data.amount,
           date: fireStoreDate,
           receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
@@ -326,6 +329,9 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
         ref: initiateTransferResponse.data.data.reference,
         critical: true,
         receipt: {
+          ...(typeof global.chargeAmount !== "undefined" && {
+            charge: global.chargeAmount,
+          }),
           amount: initiateTransferResponse.data.data.amount,
           date: fireStoreDate,
           receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
@@ -451,6 +457,9 @@ exports.makeFlutterwaveAirtimePayment = async (initiateTransferPayload) => {
         type: "paid",
         ref: initiateTransferResponse.data.data.flw_ref,
         receipt: {
+          ...(typeof global.chargeAmount !== "undefined" && {
+            charge: global.chargeAmount,
+          }),
           amount: initiateTransferResponse.data.data.amount,
           date: fireStoreDate,
           receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
@@ -626,6 +635,9 @@ exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
         type: "paid",
         ref: initiateTransferResponse.data.transactionId,
         receipt: {
+          ...(typeof global.chargeAmount !== "undefined" && {
+            charge: global.chargeAmount,
+          }),
           amount: global.triggerDocument.amount,
           date: fireStoreDate,
           receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
@@ -741,6 +753,9 @@ exports.makeReloadlyGiftCardPayment = async (giftCardPayload) => {
         pinCode: redeemGiftCardResponse.data.pinCode,
         cardNumber: redeemGiftCardResponse.data.cardNumber,
         receipt: {
+          ...(typeof global.chargeAmount !== "undefined" && {
+            charge: global.chargeAmount,
+          }),
           amount: Number(global.triggerDocument.giftCard.amount),
           date: fireStoreDate,
           receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,

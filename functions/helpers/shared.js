@@ -118,8 +118,9 @@ exports.handleSuccessfulPayment = async (paymentRef, processorName) => {
       const smsPayload = {
         id: `vendly-${Date.now()}`,
         to: [phoneDetails[0]],
+        sender_mask: "Vendly",
         body: `Hi there, you have just received ${global.triggerDocument.amount} amount of
-airtime from ${authorData}through Vendly. Visit
+airtime from ${authorData} through Vendly. Visit
 www.vendly.com to find out more.`,
       };
       const smsResponse = await axios.post(

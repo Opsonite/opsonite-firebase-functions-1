@@ -32,12 +32,12 @@ const checkVendDocumentHasBeenTampered = async (vendId) => {
     .collection("vends")
     .doc(vendId)
     .get();
-  if (vendDoc.exists()) {
+  if (vendDoc.exists) {
     console.log("vend doc exists");
   } else {
     console.log("vend doc doesn't exist");
   }
-  if (vendlyDoc.exists()) {
+  if (vendlyDoc.exists) {
     console.log("vendly doc exists");
   } else {
     console.log("vendly doc doesn't exist");
