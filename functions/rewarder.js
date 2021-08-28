@@ -103,6 +103,22 @@ const checkForUserInStrap = async (strapType, strapId, vendId) => {
   }
   return true;
 };
+const dataValidation = () => {
+  const dataToValidateRef = firestoreDb
+    .collection("vends")
+    .doc(global.vendId)
+    .collection("sessions")
+    .doc(global.userId)
+    .collection("subVend")
+    .doc(global.subvendId)
+    .doc("states")
+    .collection(global.rewardDocument.transmossion)
+    .get();
+  const dataObject = dataToValidateRef.data();
+  if (dataObject.type != "accepted") {
+  }
+};
+
 const checkForValueOfIsWonInUserStrap = async (strapType, strapId, vendId) => {
   const strapDoc = await firestoreDb
     .collection("vends")
@@ -130,6 +146,7 @@ exports.rewarder = functions
   .onCreate(async (snap, context) => {
     console.log("Rewarder started");
     const rewardDocument = snap.data();
+    global.rewardDocument = rewardDocument;
 
     global.userId = context.params.userID;
     global.vendId = context.params.vendID;
@@ -162,7 +179,7 @@ exports.rewarder = functions
         console.log("Boolean true");
         console.log("Boolean value = " + booleanObject.boolean);
 
-        if (booleanObject.time < 60) {
+        if (booleanObject.time > 60) {
           await global.booleanObjectRef.update({
             boolean: false,
             time: timestamp,
@@ -185,13 +202,12 @@ exports.rewarder = functions
             `${timestamp}_rewarder`
           );
         }
-
         return;
+      } else {
+        console.log("Boolean False");
+        console.log("Boolean value = " + booleanObject.boolean);
+        await global.booleanObjectRef.update({boolean: true, time: timestamp});
       }
-
-      console.log("Boolean False");
-      console.log("Boolean value = " + booleanObject.boolean);
-      await global.booleanObjectRef.update({boolean: true, time: timestamp});
 
       const vendActiveStatus = await checkVendActiveStatus(vendDocResult);
       if (!vendActiveStatus) {
