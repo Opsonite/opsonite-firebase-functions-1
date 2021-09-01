@@ -107,20 +107,37 @@ exports.handleSuccessfulPayment = async (paymentRef, processorName) => {
     });
   if (global.triggerDocument.transmission == "airtime") {
     try {
-      const authorRef = ref.child(
-        `vends/${global.triggerDocument.vend}/public/author/vendle`
-      );
-
-      let authorData = await authorRef.once("value");
-
       const phoneDetails = global.triggerDocument.phoneRef.split("_");
-      authorData = authorData.val();
+      let currency;
+
+      switch (global.triggerDocument.country) {
+        case "NG":
+          currency = "N";
+
+          break;
+        case "GH":
+          currency = "GHC";
+
+          break;
+        case "KE":
+          currency = "KSH";
+
+          break;
+        case "UG":
+          currency = "USH";
+
+          break;
+
+        default:
+          break;
+      }
+      const subvendData = global.subvendDoc.data();
       const smsPayload = {
         id: `vendly-${Date.now()}`,
         to: [phoneDetails[0]],
         sender_mask: "Vendly",
-        body: `Hi there, you have just received ${global.triggerDocument.amount} amount of
-airtime from ${authorData} through Vendly. Visit
+        body: `Hi there, you have just received ${currency}${global.airtimeAmount} amount of
+airtime from @${subvendData.author.handle} through Vendly. Visit
 www.vendly.com to find out more.`,
       };
       const smsResponse = await axios.post(
@@ -171,6 +188,7 @@ www.vendly.com to find out more.`,
         claimantUID: global.triggerDocument.claimant.uid,
         amount: global.triggerDocument.amount,
         authorID: global.triggerDocument.author,
+        ref: paymentRef,
       },
     });
   await firestoreDb
@@ -186,6 +204,7 @@ www.vendly.com to find out more.`,
         claimantUID: global.triggerDocument.claimant.uid,
         amount: global.triggerDocument.amount,
         authorID: global.triggerDocument.author,
+        ref: paymentRef,
       },
     });
   const vendSessionDoc = await firestoreDb

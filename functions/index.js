@@ -2,8 +2,10 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
 const realtimeDb = admin.database();
-const transactionsTrigger = require("./transactionsTrigger");
+const pay = require("./pay");
+const rewarder = require("./rewarder");
 const createTransactionDoc = require("./createTransactionDoc");
+const createRewardDoc = require("./createRewardDoc");
 const ref = realtimeDb.ref();
 const discountRef = ref.child("discountCodes");
 const {CloudTasksClient} = require("@google-cloud/tasks");
@@ -134,8 +136,10 @@ exports.discountFunction = functions.firestore
     });
   });
 
-exports.transactionsTrigger = transactionsTrigger.transactionsTrigger;
+exports.pay = pay.pay;
+exports.rewarder = rewarder.rewarder;
 exports.createTransactionDoc = createTransactionDoc.createTransactionDoc;
+exports.createRewardDoc = createRewardDoc.createRewardDoc;
 exports.onDeleteCode = functions.firestore
   .document("vendly/discountCodes/codes/{discountCode}")
   .onDelete(async (snap, context) => {

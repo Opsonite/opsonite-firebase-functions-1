@@ -79,6 +79,122 @@ exports.calculateChargeAmount = async (
   return {chargeAmount, evaluatedAmount};
 };
 
+const queueingSuccess = async (amount) => {
+  global.vaultDocRef = firestoreDb
+    .collection("vends")
+    .doc(global.triggerDocument.vend)
+    .collection("vault");
+
+  const vaultDoc = await global.vaultDocRef.get();
+  const vaultData = {};
+  vaultDoc.forEach((doc) => {
+    vaultData[doc.id] = doc.data();
+  });
+  if (global.triggerDocument.claimant.uid in vaultData) {
+    console.log("User already in vault");
+    const timestamp = Date.now();
+    const fireStoreDate = admin.firestore.Timestamp.fromDate(
+      new Date(timestamp)
+    );
+    const data = {
+      message: "User already in vault",
+      timestamp,
+      uid: global.triggerDocument.claimant.uid,
+      status: 818,
+      critical: true,
+      createdAt: fireStoreDate,
+    };
+
+    await logErrorInCollection(
+      global.triggerDocument.vend,
+      global.triggerDocument.claimant.uid,
+      global.triggerDocument.subvend,
+      data,
+      `${timestamp}_paid`
+    );
+    return false;
+  }
+  const timestamp = Date.now();
+  const fireStoreDate = admin.firestore.Timestamp.fromDate(new Date(timestamp));
+  console.log("User not in vault");
+  await global.vaultDocRef.doc(global.triggerDocument.claimant.uid).set({
+    amount: amount,
+    createdAt: fireStoreDate,
+  });
+  global.queueDocRef = firestoreDb
+    .collection("transactions")
+    .doc("payouts")
+    .collection("queue");
+  const newQueueDoc = await global.queueDocRef.add(global.triggerDocument);
+
+  global.queueDocId = newQueueDoc.id;
+  console.log("Queued but not confirmed");
+  const data = {
+    message: "success",
+    claimantUID: global.triggerDocument.claimant.uid,
+    createdAt: fireStoreDate,
+    timestamp,
+    receipt: {
+      ...(typeof global.chargeAmount !== "undefined" && {
+        charge: global.chargeAmount,
+      }),
+      amount: amount,
+      date: fireStoreDate,
+      receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
+      receivedInto: {
+        name:
+          global.triggerDocument.transmission == "bank"
+            ? global.triggerDocument.bank.acctName
+            : global.triggerDocument.name,
+        reference:
+          global.triggerDocument.transmission == "charity"
+            ? global.triggerDocument.charity
+            : global.triggerDocument.bank.ref,
+      },
+      recipient: {
+        id: global.triggerDocument.claimant.strapID,
+        type: global.triggerDocument.strapType,
+      },
+      author:
+        global.vendDoc.anonymity.reveal == false
+          ? "anonymous"
+          : global.vendDoc.author.handle,
+      sender: {
+        id:
+          global.vendDoc.anonymity.reveal == false
+            ? "anonymous"
+            : global.vendDoc.author.handle,
+        type: global.triggerDocument.strapType,
+      },
+      transmission: global.triggerDocument.transmission,
+    },
+    uid: global.triggerDocument.claimant.uid,
+    status: 204,
+    type: "paid",
+    ref: null,
+    success: false,
+    critical: true,
+  };
+  await logErrorInCollection(
+    global.triggerDocument.vend,
+    global.triggerDocument.claimant.uid,
+    global.triggerDocument.subvend,
+    data,
+    `${timestamp}_paid`
+  );
+  global.paymentLogRef = firestoreDb
+    .collection("vends")
+    .doc(global.triggerDocument.vend)
+    .collection("sessions")
+    .doc(global.triggerDocument.claimant.uid)
+    .collection("subVend")
+    .doc(global.triggerDocument.subvend)
+    .collection("logs")
+    .doc(`${timestamp}_paid`);
+
+  return true;
+};
+
 // makes paystack bank transfer payment,supports retry
 exports.makePaystackPayment = async (
   createTransferRecepientPayload,
@@ -110,12 +226,17 @@ exports.makePaystackPayment = async (
       errorData,
       `${timestamp}_paid`
     );
-    await global.subvendDoc.update({active: false});
+    await global.subvendRef.update({active: false});
     const subVendRef = ref.child(
       `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend`
     );
     await subVendRef.update({status: false});
     return;
+  }
+  if (global.paymentTries == 0) {
+    if (!(await queueingSuccess(initiateTransferPayload.amount))) {
+      return;
+    }
   }
   const randomNumber = generateRandomNumber();
   initiateTransferPayload.reference = `${initiateTransferPayload.reference}-${randomNumber}`;
@@ -152,67 +273,28 @@ exports.makePaystackPayment = async (
       (initiateTransferResponse.data.data.status == "pending" ||
         initiateTransferResponse.data.data.status == "success")
     ) {
-      const timestamp = Date.now();
-      const fireStoreDate = admin.firestore.Timestamp.fromDate(
-        new Date(timestamp)
-      );
-      const data = {
-        message: "success",
-        claimantUID: global.triggerDocument.claimant.uid,
-        createdAt: fireStoreDate,
-        timestamp,
-        receipt: {
-          ...(typeof global.chargeAmount !== "undefined" && {
-            charge: global.chargeAmount,
-          }),
-          amount: initiateTransferResponse.data.data.amount,
-          date: fireStoreDate,
-          receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
-          receivedInto: {
-            name: global.triggerDocument.bank.acctName,
-            reference:
-              global.triggerDocument.transmission == "charity"
-                ? global.triggerDocument.charity
-                : global.triggerDocument.bank.ref,
-          },
-          recipient: {
-            id: global.triggerDocument.claimant.strapID,
-            type: global.triggerDocument.strapType,
-          },
-          sender: {
-            id:
-              global.vendDoc.anonymity.reveal == false
-                ? "anonymous"
-                : global.vendDoc.author.handle,
-            type: global.triggerDocument.strapType,
-          },
-          transmission: global.triggerDocument.transmission,
-        },
-        uid: global.triggerDocument.claimant.uid,
-        status: 204,
-        type: "paid",
+      console.log("Api call successful");
+      await global.paymentLogRef.update({
         ref: initiateTransferResponse.data.data.transfer_code,
-        critical: true,
-      };
-
-      await logErrorInCollection(
-        global.triggerDocument.vend,
-        global.triggerDocument.claimant.uid,
-        global.triggerDocument.subvend,
-        data,
-        `${timestamp}_paid`
-      );
+        success: true,
+      });
+      await global.queueDocRef.doc(global.queueDocId).delete();
       console.log("Payment success");
       await handleSuccessfulPayment(
         initiateTransferResponse.data.data.transfer_code,
         "Paystack"
       );
+      await global.booleanObjectRef.update({boolean: false});
+
       return;
     }
     console.log("No error in payment but ccouldn't verify status");
+    await global.booleanObjectRef.update({boolean: false});
+
     return;
   } catch (error) {
     console.log("paystack bank error");
+    console.log("api call not successful");
 
     console.log(error.message);
     if (error.response?.data) {
@@ -292,14 +374,18 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
       errorData,
       `${timestamp}_paid`
     );
-    await global.subvendDoc.update({active: false});
+    await global.subvendRef.update({active: false});
     const subVendRef = ref.child(
       `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend`
     );
     await subVendRef.update({status: false});
     return;
   }
-
+  if (global.paymentTries == 0) {
+    if (!(await queueingSuccess(initiateTransferPayload.amount))) {
+      return;
+    }
+  }
   console.log("payload is ");
   console.log(initiateTransferPayload);
   try {
@@ -316,54 +402,12 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
       }
     );
     if (initiateTransferResponse.data.status == "success") {
-      const timestamp = Date.now();
-      const fireStoreDate = admin.firestore.Timestamp.fromDate(
-        new Date(timestamp)
-      );
-      const data = {
-        message: "success",
-        timestamp,
-        uid: global.triggerDocument.claimant.uid,
-        status: 204,
-        type: "paid",
+      console.log("Api call successful");
+      await global.paymentLogRef.update({
         ref: initiateTransferResponse.data.data.reference,
-        critical: true,
-        receipt: {
-          ...(typeof global.chargeAmount !== "undefined" && {
-            charge: global.chargeAmount,
-          }),
-          amount: initiateTransferResponse.data.data.amount,
-          date: fireStoreDate,
-          receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
-          receivedInto: {
-            name: "",
-            reference:
-              global.triggerDocument.transmission == "charity"
-                ? global.triggerDocument.charity
-                : global.triggerDocument.bank.ref,
-          },
-          recipient: {
-            id: global.triggerDocument.claimant.strapID,
-            type: global.triggerDocument.strapType,
-          },
-          sender: {
-            id:
-              global.vendDoc.anonymity.reveal == false
-                ? "anonymous"
-                : global.vendDoc.author.handle,
-            type: global.triggerDocument.strapType,
-          },
-          transmission: global.triggerDocument.transmission,
-        },
-      };
-
-      await logErrorInCollection(
-        global.triggerDocument.vend,
-        global.triggerDocument.claimant.uid,
-        global.triggerDocument.subvend,
-        data,
-        `${timestamp}_paid`
-      );
+        success: true,
+      });
+      await global.queueDocRef.doc(global.queueDocId).delete();
       console.log("Payment success");
       await handleSuccessfulPayment(
         initiateTransferResponse.data.data.reference,
@@ -371,10 +415,12 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
       );
       return;
     }
+    await global.booleanObjectRef.update({boolean: false});
     console.log("No error in payment but couldn't verify status");
     return;
   } catch (error) {
     console.log("flutterwave bank error");
+    console.log("api call not successful");
     console.log(error.message);
     if (error.response?.data) {
       console.log(error.response?.data);
@@ -430,6 +476,9 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
 exports.makeFlutterwaveAirtimePayment = async (initiateTransferPayload) => {
   setEnvironment();
 
+  if (!(await queueingSuccess(initiateTransferPayload.amount))) {
+    return;
+  }
   console.log("payload");
   console.log(initiateTransferPayload);
   try {
@@ -444,52 +493,13 @@ exports.makeFlutterwaveAirtimePayment = async (initiateTransferPayload) => {
       }
     );
     if (initiateTransferResponse.data.status == "success") {
-      const timestamp = Date.now();
-      const fireStoreDate = admin.firestore.Timestamp.fromDate(
-        new Date(timestamp)
-      );
-
-      const data = {
-        message: "success",
-        timestamp,
-        uid: global.triggerDocument.claimant.uid,
-        status: 204,
-        type: "paid",
+      console.log("Api call successful");
+      await global.paymentLogRef.update({
         ref: initiateTransferResponse.data.data.flw_ref,
-        receipt: {
-          ...(typeof global.chargeAmount !== "undefined" && {
-            charge: global.chargeAmount,
-          }),
-          amount: initiateTransferResponse.data.data.amount,
-          date: fireStoreDate,
-          receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
-          receivedInto: {
-            name: initiateTransferResponse.data.data.phone_number,
-            reference: global.triggerDocument.phoneRef,
-          },
-          recipient: {
-            id: global.triggerDocument.claimant.strapID,
-            type: global.triggerDocument.strapType,
-          },
-          sender: {
-            id:
-              global.vendDoc.anonymity.reveal == false
-                ? "anonymous"
-                : global.vendDoc.author.handle,
-            type: global.triggerDocument.strapType,
-          },
-          transmission: global.triggerDocument.transmission,
-        },
-        critical: true,
-      };
+        success: true,
+      });
+      await global.queueDocRef.doc(global.queueDocId).delete();
 
-      await logErrorInCollection(
-        global.triggerDocument.vend,
-        global.triggerDocument.claimant.uid,
-        global.triggerDocument.subvend,
-        data,
-        `${timestamp}_paid`
-      );
       console.log("Payment success");
       await handleSuccessfulPayment(
         initiateTransferResponse.data.data.flw_ref,
@@ -497,10 +507,14 @@ exports.makeFlutterwaveAirtimePayment = async (initiateTransferPayload) => {
       );
       return;
     }
+    await global.booleanObjectRef.update({boolean: false});
+
     console.log("No error in payment but couldn't verify status");
     return;
   } catch (error) {
     console.log("flutterwave airtime call error");
+    console.log("api call not successful");
+    await global.booleanObjectRef.update({boolean: false});
     console.log(error.message);
     if (error.response?.data) {
       console.log(error.response?.data);
@@ -605,6 +619,9 @@ const getReloadlyAuthentication = async (audience) => {
 exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
   setEnvironment();
 
+  if (!(await queueingSuccess(initiateTransferPayload.amount))) {
+    return;
+  }
   console.log("payload");
   console.log(initiateTransferPayload);
   try {
@@ -623,51 +640,13 @@ exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
       }
     );
     if (initiateTransferResponse.data.transactionId) {
-      const timestamp = Date.now();
-      const fireStoreDate = admin.firestore.Timestamp.fromDate(
-        new Date(timestamp)
-      );
-      const data = {
-        message: "success",
-        timestamp,
-        uid: global.triggerDocument.claimant.uid,
-        status: 204,
-        type: "paid",
+      console.log("Api call successful");
+      await global.paymentLogRef.update({
         ref: initiateTransferResponse.data.transactionId,
-        receipt: {
-          ...(typeof global.chargeAmount !== "undefined" && {
-            charge: global.chargeAmount,
-          }),
-          amount: global.triggerDocument.amount,
-          date: fireStoreDate,
-          receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
-          receivedInto: {
-            name: global.triggerDocument.alias,
-            reference: global.triggerDocument.phoneRef,
-          },
-          recipient: {
-            id: global.triggerDocument.claimant.strapID,
-            type: global.triggerDocument.strapType,
-          },
-          sender: {
-            id:
-              global.vendDoc.anonymity.reveal == false
-                ? "anonymous"
-                : global.vendDoc.author.handle,
-            type: global.triggerDocument.strapType,
-          },
-          transmission: global.triggerDocument.transmission,
-        },
-        critical: true,
-      };
+        success: true,
+      });
+      await global.queueDocRef.doc(global.queueDocId).delete();
 
-      await logErrorInCollection(
-        global.triggerDocument.vend,
-        global.triggerDocument.claimant.uid,
-        global.triggerDocument.subvend,
-        data,
-        `${timestamp}_paid`
-      );
       await handleSuccessfulPayment(
         initiateTransferResponse.data.transactionId,
         "Reloadly"
@@ -679,6 +658,8 @@ exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
     return;
   } catch (error) {
     console.log("Airtime payment failed");
+    console.log("api call not successful");
+    await global.booleanObjectRef.update({boolean: false});
     console.log(error.message);
     if (error.response?.data) {
       console.log(error.response?.data);
@@ -711,7 +692,9 @@ exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
 };
 exports.makeReloadlyGiftCardPayment = async (giftCardPayload) => {
   setEnvironment();
-
+  if (!(await queueingSuccess(giftCardPayload.unitPrice))) {
+    return;
+  }
   try {
     const authorization = await getReloadlyAuthentication(
       "https://giftcards.reloadly.com"
@@ -739,52 +722,17 @@ exports.makeReloadlyGiftCardPayment = async (giftCardPayload) => {
       }
     );
     if (giftCardResponse.data.transactionId) {
+      console.log("Api call successful");
+      await global.paymentLogRef.update({
+        ref: giftCardResponse.data.transactionId,
+        success: true,
+      });
+      await global.queueDocRef.doc(global.queueDocId).delete();
       const timestamp = Date.now();
       const fireStoreDate = admin.firestore.Timestamp.fromDate(
         new Date(timestamp)
       );
-      const data = {
-        message: "success",
-        timestamp,
-        uid: global.triggerDocument.claimant.uid,
-        status: 200,
-        type: "paid",
-        ref: giftCardResponse.data.transactionId,
-        pinCode: redeemGiftCardResponse.data.pinCode,
-        cardNumber: redeemGiftCardResponse.data.cardNumber,
-        receipt: {
-          ...(typeof global.chargeAmount !== "undefined" && {
-            charge: global.chargeAmount,
-          }),
-          amount: Number(global.triggerDocument.giftCard.amount),
-          date: fireStoreDate,
-          receiptNo: `${global.triggerDocument.subvend}${global.triggerDocument.vend}`,
-          receivedInto: {
-            reference: global.triggerDocument.email,
-          },
-          recipient: {
-            id: global.triggerDocument.claimant.strapID,
-            type: global.triggerDocument.strapType,
-          },
-          sender: {
-            id:
-              global.vendDoc.anonymity.reveal == false
-                ? "anonymous"
-                : global.vendDoc.author.handle,
-            type: global.triggerDocument.strapType,
-          },
-          transmission: global.triggerDocument.transmission,
-        },
-        critical: true,
-      };
 
-      await logErrorInCollection(
-        global.triggerDocument.vend,
-        global.triggerDocument.claimant.uid,
-        global.triggerDocument.subvend,
-        data,
-        `${timestamp}_paid`
-      );
       await firestoreDb
         .collection("users")
         .doc(global.triggerDocument.claimant.uid)

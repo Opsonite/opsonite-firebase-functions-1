@@ -8,6 +8,21 @@ const crypto = require("crypto");
 
 exports.createTransactionDoc = functions.https.onRequest(async (req, res) => {
   try {
+    const vaultDocRef = firestoreDb
+      .collection("vends")
+      .doc(req.query.vend)
+      .collection("vault");
+    const vaultDoc = await vaultDocRef.get();
+    // console.log(vaultDoc);
+
+    for (const doc of vaultDoc.docs) {
+      console.log("doc id " + doc.id);
+      if (doc.id !== "funding") {
+        console.log("deleting  from vault " + doc.id);
+        await doc.ref.delete();
+      }
+    }
+
     console.log(req.query);
     const hashData = `${req.query.uid}${req.query.vend}`;
 
@@ -18,6 +33,7 @@ exports.createTransactionDoc = functions.https.onRequest(async (req, res) => {
     console.log("boolean id " + booleanObjectId);
     const docObject = {
       amount: req.query.amount ? Number(req.query.amount) : "",
+      name: req.query.name ? req.query.name : "",
       author: req.query.author ? req.query.author : "",
       charity: req.query.charity ? req.query.charity : "",
       claimant: {

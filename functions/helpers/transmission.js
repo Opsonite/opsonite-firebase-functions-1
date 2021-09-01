@@ -130,7 +130,7 @@ exports.handleCharityTransmission = async () => {
   const conversionReference = await conversionRef.once("value");
   const conversionRate = conversionReference.val();
   const chargeDocumentRef = ref.child(
-    `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
+    `institutions/${global.triggerDocument.currency}/bank/charges`
   );
 
   const bankDetails = charityData.bankRef.split("_");
@@ -417,22 +417,12 @@ exports.handleMobileMoneyTransmission = async () => {
         currency: "GHS",
         reference: reference,
         narration: global.vendDoc.description,
-        beneficiary_name: global.triggerDocument.bank.acctName,
+        beneficiary_name: global.triggerDocument.name,
         amount: amount,
       };
       global.paymentTries = 0;
 
       await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-      await firestoreDb
-        .collection("charities")
-        .doc(global.triggerDocument.charity)
-        .collection("notifications")
-        .add({
-          type: "charity_alert",
-          vendID: global.triggerDocument.vend,
-          subVendID: global.triggerDocument.subvend,
-          claimantID: global.triggerDocument.claimant.uid,
-        });
 
       break;
     }
@@ -451,22 +441,12 @@ exports.handleMobileMoneyTransmission = async () => {
         currency: "KES",
         reference: reference,
         narration: global.vendDoc.description,
-        beneficiary_name: global.triggerDocument.bank.acctName,
+        beneficiary_name: global.triggerDocument.name,
         amount: amount,
       };
       global.paymentTries = 0;
 
       await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-      await firestoreDb
-        .collection("charities")
-        .doc(global.triggerDocument.charity)
-        .collection("notifications")
-        .add({
-          type: "charity_alert",
-          vendID: global.triggerDocument.vend,
-          subVendID: global.triggerDocument.subvend,
-          claimantID: global.triggerDocument.claimant.uid,
-        });
 
       break;
     }
@@ -485,22 +465,12 @@ exports.handleMobileMoneyTransmission = async () => {
         currency: "UGX",
         reference: reference,
         narration: global.vendDoc.description,
-        beneficiary_name: global.triggerDocument.bank.acctName,
+        beneficiary_name: global.triggerDocument.name,
         amount: amount,
       };
       global.paymentTries = 0;
 
       await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-      await firestoreDb
-        .collection("charities")
-        .doc(global.triggerDocument.charity)
-        .collection("notifications")
-        .add({
-          type: "charity_alert",
-          vendID: global.triggerDocument.vend,
-          subVendID: global.triggerDocument.subvend,
-          claimantID: global.triggerDocument.claimant.uid,
-        });
 
       break;
     }
@@ -541,6 +511,7 @@ exports.handleAirtimeTransmission = async () => {
     );
 
     const amount = Math.floor(evaluatedAmount);
+    global.airtimeAmount = amount;
 
     const initiateTransferPayload = {
       country: global.triggerDocument.country,
@@ -563,6 +534,7 @@ exports.handleAirtimeTransmission = async () => {
     );
 
     const amount = Math.floor(evaluatedAmount);
+    global.airtimeAmount = amount;
 
     const initiateTransferPayload = {
       operatorId: global.triggerDocument.operatorID,

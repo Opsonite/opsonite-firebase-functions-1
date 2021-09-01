@@ -121,7 +121,7 @@ const runtimeOpts = {
   memory: "2GB",
 };
 
-exports.transactionsTrigger = functions
+exports.pay = functions
   .runWith(runtimeOpts)
   .firestore.document("transactions/payouts/records/{trigger}")
   .onCreate(async (snap, context) => {
