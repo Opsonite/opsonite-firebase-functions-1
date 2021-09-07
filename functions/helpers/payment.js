@@ -76,6 +76,10 @@ exports.calculateChargeAmount = async (
   console.log("exchange rate" + conversionRate);
   console.log("charge " + chargeAmount);
   console.log("evaluated amount " + evaluatedAmount);
+
+  if (isNaN(chargeAmount) || isNaN(evaluatedAmount)) {
+    throw Error("error calculating charge amount");
+  }
   return {chargeAmount, evaluatedAmount};
 };
 
@@ -85,8 +89,7 @@ const queueingSuccess = async (amount) => {
     .doc(global.triggerDocument.vend)
     .collection("vault");
 
-  const vaultDoc = await global.vaultDocRef.get();
-  // #TODO  update here
+  const vaultDoc = global.vaultDoc;
 
   const vaultData = {};
   vaultDoc.forEach((doc) => {
@@ -158,14 +161,14 @@ const queueingSuccess = async (amount) => {
         type: global.triggerDocument.strapType,
       },
       author:
-        global.vendDoc.anonymity.reveal == false
+        global.vendDocData.anonymity.reveal == false
           ? "anonymous"
-          : global.vendDoc.author.handle,
+          : global.vendDocData.author.handle,
       sender: {
         id:
-          global.vendDoc.anonymity.reveal == false
+          global.vendDocData.anonymity.reveal == false
             ? "anonymous"
-            : global.vendDoc.author.handle,
+            : global.vendDocData.author.handle,
         type: global.triggerDocument.strapType,
       },
       transmission: global.triggerDocument.transmission,

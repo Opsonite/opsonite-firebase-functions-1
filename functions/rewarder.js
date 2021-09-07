@@ -4,14 +4,7 @@ const realtimeDb = admin.database();
 const firestoreDb = admin.firestore();
 const crypto = require("crypto");
 const ref = realtimeDb.ref();
-// const {
-//   handleBankTransmission,
-//   handleCharityTransmission,
-//   handleRevendTransmission,
-//   handleGiftCardTransmission,
-//   handleMobileMoneyTransmission,
-//   handleAirtimeTransmission,
-// } = require("./helpers/transmission");
+
 const {logErrorInCollection} = require("./helpers/shared");
 
 // const {CloudTasksClient} = require("@google-cloud/tasks");
@@ -199,13 +192,9 @@ const dataValidationPassed = async () => {
   }
 };
 const charityValidationPassed = async () => {
-  const charityObject = await firestoreDb
-    .collection("charities")
-    .doc(global.rewardDocument.charity)
-    .get();
   let charityData;
-  if (charityObject.exists) {
-    charityData = charityObject.data();
+  if (global.charityDoc.exists) {
+    charityData = global.charityDoc.data();
   }
   if (
     charityData.country != global.rewardDocument.country ||
@@ -220,15 +209,7 @@ const charityValidationPassed = async () => {
   return true;
 };
 const giftCardValidationPassed = async () => {
-  const subvendDoc = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .collection("subVend")
-    .doc(global.subvendId)
-    .get();
-  const subvendData = subvendDoc.data();
+  const subvendData = global.subvendDoc.data();
 
   if (
     subvendData.giftCard?.currency != global.rewardDocument.currency ||
@@ -247,31 +228,12 @@ const giftCardValidationPassed = async () => {
 };
 const setTriggerObject = async () => {
   console.log("settng trigger object");
-  const subvendDoc = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .collection("subVend")
-    .doc(global.subvendId)
-    .get();
-  const subvendData = subvendDoc.data();
-  const resolveDoc = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .collection("subVend")
-    .doc(global.subvendId)
-    .collection("actions")
-    .doc("resolve")
-    .get();
-  const resolveData = resolveDoc.data();
-  const userObject = await firestoreDb
-    .collection("users")
-    .doc(global.userId)
-    .get();
-  const userData = userObject.data();
+
+  const subvendData = global.subvendDoc.data();
+
+  const resolveData = global.resolveDoc.data();
+
+  const userData = global.userDoc.data();
   if (resolveData.acctName !== global.rewardDocument.bank.acctName) {
     const timestamp = Date.now();
     const fireStoreDate = admin.firestore.Timestamp.fromDate(
@@ -500,17 +462,7 @@ const subvendExpired = async () => {
   return false;
 };
 const validateBankTransmission = async () => {
-  const mainDoc = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .collection("subVend")
-    .doc(global.subvendId)
-    .collection("logs")
-    .doc("main")
-    .get();
-  const mainDocData = mainDoc.data();
+  const mainDocData = global.mainDoc.data();
 
   if (!global.rewardDocument.transmissionCode == mainDocData.transmissionCode) {
     const timestamp = Date.now();
@@ -542,15 +494,10 @@ const validateBankTransmission = async () => {
   return true;
 };
 const userIdExistsInSuccessCollection = async () => {
-  const successRef = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("success")
-    .get();
-  if (!successRef.exists) {
+  if (!global.successDoc.exists) {
     return false;
   }
-  const successData = successRef.data();
+  const successData = global.successDoc.data();
   if (successData.userUID) {
     const timestamp = Date.now();
     const fireStoreDate = admin.firestore.Timestamp.fromDate(
@@ -594,23 +541,7 @@ const userIdExistsInSuccessCollection = async () => {
   return false;
 };
 const passedSubvendValidation = async () => {
-  global.subvendRef = firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .collection("subVend")
-    .doc(global.subvendId);
-  const subvendDoc = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .collection("subVend")
-    .doc(global.subvendId)
-    .get();
-  global.subvendDoc = subvendDoc;
-  global.subvendData = subvendDoc.data();
+  global.subvendData = global.subvendDoc.data();
   if (global.subvendData.claimant.uid == global.userId) {
     console.log("Claimant Id passed");
   } else {
@@ -675,9 +606,7 @@ const passedSubvendValidation = async () => {
   }
 };
 const passedRtdValidation = async () => {
-  const rtdRef = ref.child(`vends/${global.vendId}/public/state`);
-  const rtdObject = await rtdRef.once("value");
-  const rtdData = rtdObject.val();
+  const rtdData = global.rtdDoc.val();
 
   if (rtdData != "active") {
     console.log(`vend is ${rtdData} `);
@@ -711,18 +640,7 @@ const passedRtdValidation = async () => {
   return true;
 };
 const checkVendSessionStatusIsWon = async () => {
-  global.vendSessionRef = firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId);
-  const vendSessionDoc = await firestoreDb
-    .collection("vends")
-    .doc(global.vendId)
-    .collection("sessions")
-    .doc(global.userId)
-    .get();
-  const vendSessionDocData = vendSessionDoc.data();
+  const vendSessionDocData = global.vendSessionDoc.data();
   let subvendReversed = false;
   if (vendSessionDocData.reversals) {
     vendSessionDocData.reversals.forEach((subvendId) => {
@@ -743,14 +661,9 @@ const handleBankTransmission = async () => {
     `users/${global.userId}/myBankAccts/${global.rewardDocument.bank.ref}`
   );
 
-  const userBankRtdRef = ref.child(`users/${global.userId}/myBankAccts`);
-  const userBankDoc = await userBankRtdRef.once("value");
-  const userBankData = userBankDoc.val();
-  const userBankCodRef = ref.child(
-    `institutions/${global.rewardDocument.currency}/bank/shortNames/${bankDetails[1]}`
-  );
-  const userBankCodeDoc = await userBankCodRef.once("value");
-  const userBankCodeData = userBankCodeDoc.val();
+  const userBankData = global.userBankRtdDoc.val();
+
+  const userBankCodeData = global.userBankCodeDoc.val();
   await userRtdRef.set({
     acctNo: bankDetails[0],
     bankCode: bankDetails[1],
@@ -768,12 +681,12 @@ const handleBankTransmission = async () => {
 
     for (const bankRef in userBankData) {
       if (userBankData[bankRef]["isPrimary"]) {
-        await userBankRtdRef.child(bankRef).update({
+        await global.userBankRtdRef.child(bankRef).update({
           isPrimary: false,
         });
       }
     }
-    await userBankRtdRef.update({
+    await global.userBankRtdRef.update({
       isPrimary: true,
     });
   }
@@ -783,9 +696,7 @@ const handleMMTransmission = async () => {
     `users/${global.userId}/myMMAccts/${global.rewardDocument.phoneRef}`
   );
 
-  const userMMRef = ref.child(`users/${global.userId}/myMMAccts`);
-  const userMMDoc = await userMMRef.once("value");
-  const userMMData = userMMDoc.val();
+  const userMMData = global.userMMDoc.val();
   const phoneDetails = global.rewardDocument.phoneRef.split("_");
   await userRtdRef.set({
     phoneNo: phoneDetails[0],
@@ -801,7 +712,7 @@ const handleMMTransmission = async () => {
 
     for (const phoneRef in userMMData) {
       if (userMMData[phoneRef]["isPrimary"]) {
-        await userMMRef.child(phoneRef).update({
+        await global.userMMRef.child(phoneRef).update({
           isPrimary: false,
         });
       }
@@ -814,9 +725,7 @@ const handleAirtimeTransmission = async () => {
     `users/${global.userId}/myMMAccts/${global.rewardDocument.phoneRef}`
   );
 
-  const userMMRef = ref.child(`users/${global.userId}/myMMAccts`);
-  const userMMDoc = await userMMRef.once("value");
-  const userMMData = userMMDoc.val();
+  const userMMData = global.userMMDoc.val();
   const phoneDetails = global.rewardDocument.phoneRef.split("_");
   await userRtdRef.set({
     phoneNo: phoneDetails[0],
@@ -832,16 +741,14 @@ const handleAirtimeTransmission = async () => {
 
     for (const phoneRef in userMMData) {
       if (userMMData[phoneRef]["isPrimary"]) {
-        await userMMRef.child(phoneRef).update({isPrimary: false});
+        await global.userMMRef.child(phoneRef).update({isPrimary: false});
       }
     }
     await userRtdRef.update({isPrimary: true});
   }
 };
 const passedPinValidation = async () => {
-  const pinRef = ref.child(`users/${global.userId}/public_profile/PIN`);
-  const pinObject = await pinRef.once("value");
-  const pinData = pinObject.val();
+  const pinData = global.pinDoct.val();
   if (!pinData) {
     return true;
   }
@@ -881,11 +788,8 @@ const passedPinValidation = async () => {
       .update(global.rewardDocument.PIN)
       .digest("hex");
     console.log("pin hash  is " + pinHash);
-    const userObject = await firestoreDb
-      .collection("users")
-      .doc(global.userId)
-      .get();
-    const userData = userObject.data();
+
+    const userData = global.userDoc.data();
     if (pinHash == userData.PIN) {
       console.log("Pin valid");
       return true;
@@ -921,10 +825,139 @@ const passedPinValidation = async () => {
   }
 };
 
-// const runtimeOpts = {
-//   timeoutSeconds: 300,
-//   memory: "2GB",
-// };
+const loadData = async () => {
+  const firestorePromises = [];
+  const booleanObjectRef = ref.child(
+    `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend/backend`
+  );
+  const rtdRef = ref.child(`vends/${global.vendId}/public/state`);
+  const userBankRtdRef = ref.child(`users/${global.userId}/myBankAccts`);
+  global.userBankRtdRef = userBankRtdRef;
+  const bankDetails = global.rewardDocument.bank.ref.split("_");
+  const userMMRef = ref.child(`users/${global.userId}/myMMAccts`);
+  global.userMMRef = userMMRef;
+  const userBankCodRef = ref.child(
+    `institutions/${global.rewardDocument.currency}/bank/shortNames/${bankDetails[1]}`
+  );
+
+  const pinRef = ref.child(`users/${global.userId}/public_profile/PIN`);
+  // vendSessionDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .collection("sessions")
+      .doc(global.triggerDocument.claimant.uid)
+      .get()
+  );
+
+  global.vendSessionRef = firestoreDb
+    .collection("vends")
+    .doc(global.vendId)
+    .collection("sessions")
+    .doc(global.userId);
+
+  // successDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.vendId)
+      .collection("success")
+      .get()
+  );
+
+  // resolveDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.vendId)
+      .collection("sessions")
+      .doc(global.userId)
+      .collection("subVend")
+      .doc(global.subvendId)
+      .collection("actions")
+      .doc("resolve")
+      .get()
+  );
+
+  // userDoc
+  firestorePromises.push(
+    firestoreDb.collection("users").doc(global.userId).get()
+  );
+
+  // mainDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.vendId)
+      .collection("sessions")
+      .doc(global.userId)
+      .collection("subVend")
+      .doc(global.subvendId)
+      .collection("logs")
+      .doc("main")
+      .get()
+  );
+
+  // charityDoc
+  firestorePromises.push(
+    firestoreDb.collection("charities").doc(global.rewardDocument.charity).get()
+  );
+
+  // subvendDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.vendId)
+      .collection("sessions")
+      .doc(global.userId)
+      .collection("subVend")
+      .doc(global.subvendId)
+      .get()
+  );
+
+  // rtd
+  firestorePromises.push(booleanObjectRef.once("value"));
+  firestorePromises.push(rtdRef.once("value"));
+  firestorePromises.push(userBankRtdRef.once("value"));
+  firestorePromises.push(userBankCodRef.once("value"));
+  firestorePromises.push(pinRef.once("value"));
+  firestorePromises.push(userMMRef.once("value"));
+
+  try {
+    const [
+      vendSessionDoc,
+      successDoc,
+      resolveDoc,
+      userDoc,
+      mainDoc,
+      charityDoc,
+      subvendDoc,
+      booleanObjectDoc,
+      rtdDoc,
+      userBankRtdDoc,
+      userBankCodeDoc,
+      pinDoc,
+      userMMDoc,
+    ] = await Promise.all(firestorePromises);
+    global.vendSessionDoc = vendSessionDoc;
+    global.successDoc = successDoc;
+    global.subvendDoc = subvendDoc;
+    global.charityDoc = charityDoc;
+    global.resolveDoc = resolveDoc;
+    global.mainDoc = mainDoc;
+    global.userDoc = userDoc;
+    global.booleanObjectDoc = booleanObjectDoc;
+    global.rtdDoc = rtdDoc;
+    global.userBankRtdDoc = userBankRtdDoc;
+    global.pinDoc = pinDoc;
+    global.userBankCodeDoc = userBankCodeDoc;
+    global.userMMDoc = userMMDoc;
+  } catch (error) {
+    console.log("error resolving promises");
+    throw Error(error);
+  }
+};
 
 exports.rewarder = functions.firestore
   .document(
@@ -983,9 +1016,10 @@ exports.rewarder = functions.firestore
       const booleanObjectRef = ref.child(
         `vends/${global.vendId}/knocks/attempts/${booleanObjectId}/subvend/backend`
       );
-      const booleanRef = await booleanObjectRef.once("value");
-      const booleanObject = booleanRef.val();
+      const booleanObject = global.booleanObjectDoc.val();
       global.booleanObjectRef = booleanObjectRef;
+
+      await loadData();
       await setTriggerObject();
 
       let timestamp = Date.now();

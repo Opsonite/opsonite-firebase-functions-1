@@ -19,12 +19,7 @@ exports.handleBankTransmission = async () => {
     throw Error("trigger document is not set");
   }
 
-  const conversionRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/exRates/${global.triggerDocument.currency}`
-  );
-
-  let conversionRate = await conversionRef.once("value");
-  // #TODO  update here
+  let conversionRate = global.conversionRefDoc;
 
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
@@ -34,16 +29,7 @@ exports.handleBankTransmission = async () => {
   let reference = `${global.triggerDocument.vend}_${Date.now()}`;
   reference = reference.toLowerCase();
   console.log(`Country is ${global.triggerDocument.country}`);
-  // #TODO  update here
 
-  const subvendRef = firestoreDb
-    .collection("vends")
-    .doc(global.triggerDocument.vend)
-    .collection("sessions")
-    .doc(global.triggerDocument.claimant.uid)
-    .collection("subVend")
-    .doc(global.triggerDocument.subvend);
-  global.subvendDoc = subvendRef;
   switch (global.triggerDocument.country) {
     case "NG": {
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -63,7 +49,7 @@ exports.handleBankTransmission = async () => {
         source: "balance",
         currency: "NGN",
         reference: reference,
-        reason: global.vendDoc.description,
+        reason: global.vendDocData.description,
         amount: amount,
       };
       global.paymentTries = 0;
@@ -76,18 +62,7 @@ exports.handleBankTransmission = async () => {
       break;
     }
     case "GH": {
-      // #TODO  update here
-
-      const subvendDoc = await firestoreDb
-        .collection("vends")
-        .doc(global.triggerDocument.vend)
-        .collection("sessions")
-        .doc(global.triggerDocument.claimant.uid)
-        .collection("subVend")
-        .doc(global.triggerDocument.subvend)
-        .get();
-      global.subvendDoc = subvendDoc;
-      const subvendData = subvendDoc.data();
+      const subvendData = global.subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
         subvendData.to.raw,
         chargeDocumentRef,
@@ -101,7 +76,7 @@ exports.handleBankTransmission = async () => {
         account_number: bankDetails[0],
         currency: "GHS",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: global.triggerDocument.bank.acctName,
         amount: amount,
         ...(!!global.triggerDocument.bank.branchCode && {
@@ -115,7 +90,7 @@ exports.handleBankTransmission = async () => {
       break;
     }
     default:
-      break;
+      throw Error("Invalid country for bank");
   }
 };
 exports.handleCharityTransmission = async () => {
@@ -123,22 +98,9 @@ exports.handleCharityTransmission = async () => {
     throw Error("trigger document is not set");
   }
 
-  const charityDoc = await firestoreDb
-    .collection("charities")
-    .doc(global.triggerDocument.charity)
-    .get();
-  // #TODO  update here
+  const charityData = global.charityDoc.data();
 
-  const charityData = charityDoc.data();
-
-  const conversionRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/exRates/${global.triggerDocument.currency}`
-  );
-
-  const conversionReference = await conversionRef.once("value");
-  // #TODO  update here
-
-  const conversionRate = conversionReference.val();
+  const conversionRate = global.conversionRefDoc.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/bank/charges`
   );
@@ -150,18 +112,7 @@ exports.handleCharityTransmission = async () => {
   reference = reference.toLowerCase();
   switch (global.triggerDocument.country) {
     case "NG": {
-      const subvendDoc = await firestoreDb
-        .collection("vends")
-        .doc(global.triggerDocument.vend)
-        .collection("sessions")
-        .doc(global.triggerDocument.claimant.uid)
-        .collection("subVend")
-        .doc(global.triggerDocument.subvend)
-        .get();
-      // #TODO  update here
-
-      global.subvendDoc = subvendDoc;
-      const subvendData = subvendDoc.data();
+      const subvendData = global.subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
         subvendData.to.raw,
         chargeDocumentRef,
@@ -182,7 +133,7 @@ exports.handleCharityTransmission = async () => {
         source: "balance",
         currency: "NGN",
         reference: reference,
-        reason: global.vendDoc.description,
+        reason: global.vendDocData.description,
         amount: amount,
       };
       global.paymentTries = 0;
@@ -206,18 +157,7 @@ exports.handleCharityTransmission = async () => {
       break;
     }
     case "GH": {
-      const subvendDoc = await firestoreDb
-        .collection("vends")
-        .doc(global.triggerDocument.vend)
-        .collection("sessions")
-        .doc(global.triggerDocument.claimant.uid)
-        .collection("subVend")
-        .doc(global.triggerDocument.subvend)
-        .get();
-      // #TODO  update here
-
-      global.subvendDoc = subvendDoc;
-      const subvendData = subvendDoc.data();
+      const subvendData = global.subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
         subvendData.to.raw,
         chargeDocumentRef,
@@ -230,7 +170,7 @@ exports.handleCharityTransmission = async () => {
         account_number: bankDetails[0],
         currency: "GHS",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: charityData.fullName,
         amount: amount,
         ...(!!global.triggerDocument.bank.branchCode && {
@@ -254,18 +194,7 @@ exports.handleCharityTransmission = async () => {
       break;
     }
     case "KE": {
-      const subvendDoc = await firestoreDb
-        .collection("vends")
-        .doc(global.triggerDocument.vend)
-        .collection("sessions")
-        .doc(global.triggerDocument.claimant.uid)
-        .collection("subVend")
-        .doc(global.triggerDocument.subvend)
-        .get();
-      // #TODO  update here
-
-      global.subvendDoc = subvendDoc;
-      const subvendData = subvendDoc.data();
+      const subvendData = global.subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
         subvendData.to.raw,
         chargeDocumentRef,
@@ -278,7 +207,7 @@ exports.handleCharityTransmission = async () => {
         account_number: bankDetails[0],
         currency: "KES",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: charityData.fullName,
         amount: amount,
         ...(!!global.triggerDocument.bank.branchCode && {
@@ -302,18 +231,7 @@ exports.handleCharityTransmission = async () => {
       break;
     }
     case "UG": {
-      const subvendDoc = await firestoreDb
-        .collection("vends")
-        .doc(global.triggerDocument.vend)
-        .collection("sessions")
-        .doc(global.triggerDocument.claimant.uid)
-        .collection("subVend")
-        .doc(global.triggerDocument.subvend)
-        .get();
-      // #TODO  update here
-
-      global.subvendDoc = subvendDoc;
-      const subvendData = subvendDoc.data();
+      const subvendData = global.subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
         subvendData.to.raw,
         chargeDocumentRef,
@@ -326,7 +244,7 @@ exports.handleCharityTransmission = async () => {
         account_number: bankDetails[0],
         currency: "KES",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: charityData.fullName,
         amount: amount,
         ...(!!global.triggerDocument.bank.branchCode && {
@@ -350,18 +268,7 @@ exports.handleCharityTransmission = async () => {
       break;
     }
     case "ZA": {
-      const subvendDoc = await firestoreDb
-        .collection("vends")
-        .doc(global.triggerDocument.vend)
-        .collection("sessions")
-        .doc(global.triggerDocument.claimant.uid)
-        .collection("subVend")
-        .doc(global.triggerDocument.subvend)
-        .get();
-      // #TODO  update here
-
-      global.subvendDoc = subvendDoc;
-      const subvendData = subvendDoc.data();
+      const subvendData = global.subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
         subvendData.to.raw,
         chargeDocumentRef,
@@ -374,7 +281,7 @@ exports.handleCharityTransmission = async () => {
         account_number: bankDetails[0],
         currency: "ZAR",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: charityData.fullName,
         amount: amount,
         ...(!!global.triggerDocument.bank.branchCode && {
@@ -408,14 +315,7 @@ exports.handleMobileMoneyTransmission = async () => {
     throw Error("trigger document is not set");
   }
 
-  const conversionRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/exRates/${global.triggerDocument.currency}`
-  );
-
-  let conversionRate = await conversionRef.once("value");
-  // #TODO  update here
-
-  conversionRate = conversionRate.val();
+  const conversionRate = global.conversionRefDoc.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
   );
@@ -438,7 +338,7 @@ exports.handleMobileMoneyTransmission = async () => {
         account_number: global.triggerDocument.phoneRef,
         currency: "GHS",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: global.triggerDocument.name,
         amount: amount,
       };
@@ -462,7 +362,7 @@ exports.handleMobileMoneyTransmission = async () => {
         account_number: global.triggerDocument.phoneRef,
         currency: "KES",
         reference: reference,
-        narration: global.vendDoc.description,
+        narration: global.vendDocData.description,
         beneficiary_name: global.triggerDocument.name,
         amount: amount,
       };
@@ -508,14 +408,7 @@ exports.handleAirtimeTransmission = async () => {
     throw Error("trigger document is not set");
   }
 
-  const conversionRef = ref.child(
-    `institutions/${global.triggerDocument.defaultCurrency}/exRates/${global.triggerDocument.currency}`
-  );
-
-  let conversionRate = await conversionRef.once("value");
-  // #TODO  update here
-
-  conversionRate = conversionRate.val();
+  const conversionRate = global.conversionRefDoc.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
   );
@@ -665,9 +558,9 @@ exports.handleRevendTransmission = async () => {
       },
       sender: {
         id:
-          global.vendDoc.anonymity.reveal == false
+          global.vendDocData.anonymity.reveal == false
             ? "anonymous"
-            : global.vendDoc.author.handle,
+            : global.vendDocData.author.handle,
         type: global.triggerDocument.strapType,
       },
       transmission: global.triggerDocument.transmission,

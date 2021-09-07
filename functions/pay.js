@@ -13,8 +13,6 @@ const {
 } = require("./helpers/transmission");
 const {logErrorInCollection} = require("./helpers/shared");
 
-// const {CloudTasksClient} = require("@google-cloud/tasks");
-
 const checkVendActiveStatus = async (vendDocResult) => {
   if (vendDocResult.active) {
     return true;
@@ -24,7 +22,6 @@ const checkVendActiveStatus = async (vendDocResult) => {
 
 const loadlAllDocs = async () => {
   const firestorePromises = [];
-  const rtdPromises = [];
   const booleanObjectRef = ref.child(
     `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend/backend`
   );
@@ -35,16 +32,6 @@ const loadlAllDocs = async () => {
   // vendDoc
   firestorePromises.push(
     firestoreDb.collection("vends").doc(global.triggerDocument.vend).get()
-  );
-
-  // vendlyDoc
-  firestorePromises.push(
-    firestoreDb
-      .collection("vendly")
-      .doc("vendinator")
-      .collection("vends")
-      .doc(global.triggerDocument.vend)
-      .get()
   );
 
   // vendlyDoc
@@ -97,6 +84,7 @@ const loadlAllDocs = async () => {
       .collection("vends")
       .doc(global.triggerDocument.vend)
       .collection("vault")
+      .get()
   );
 
   // subvendDoc
@@ -110,6 +98,13 @@ const loadlAllDocs = async () => {
       .doc(global.triggerDocument.subvend)
       .get()
   );
+  global.subvendRef = firestoreDb
+    .collection("vends")
+    .doc(global.triggerDocument.vend)
+    .collection("sessions")
+    .doc(global.triggerDocument.claimant.uid)
+    .collection("subVend")
+    .doc(global.triggerDocument.subvend);
 
   // charityDoc;
   firestorePromises.push(
@@ -119,38 +114,52 @@ const loadlAllDocs = async () => {
       .get()
   );
 
-  rtdPromises.push(booleanObjectRef.once("value"));
-  rtdPromises.push(conversionRef.once("value"));
+  // rtd
+  firestorePromises.push(booleanObjectRef.once("value"));
+  firestorePromises.push(conversionRef.once("value"));
 
   try {
-    Promise.all(firestorePromises);
+    const [
+      vendDoc,
+      vendlyDoc,
+      vendSessionDoc,
+      attemptedVendSessionDoc,
+      strapDoc,
+      vaultDoc,
+      subvendDoc,
+      charityDoc,
+      booleanObjectDoc,
+      conversionRefDoc,
+    ] = await Promise.all(firestorePromises);
+    global.vendDoc = vendDoc;
+    global.vendlyDoc = vendlyDoc;
+    global.vendSessionDoc = vendSessionDoc;
+    global.attemptedVendSessionDoc = attemptedVendSessionDoc;
+    global.strapDoc = strapDoc;
+    global.vaultDoc = vaultDoc;
+    global.subvendDoc = subvendDoc;
+    global.charityDoc = charityDoc;
+    global.booleanObjectDoc = booleanObjectDoc;
+    global.conversionRefDoc = conversionRefDoc;
+    global.booleanObjectDoc = booleanObjectDoc;
+    global.conversionRefDoc = conversionRefDoc;
   } catch (error) {
-    console.log(error);
-    throw Error("error performing initital read");
+    console.log("error resolving promises");
+    throw Error(error);
   }
 };
 
 const checkVendDocumentHasBeenTampered = async (vendId) => {
   console.log("checking if  vend has been tampered");
   console.log("vendId is " + vendId);
-  const vendDoc = await firestoreDb.collection("vends").doc(`${vendId}`).get();
-  // #TODO  update here
-  const vendlyDoc = await firestoreDb
-    .collection("vendly")
-    .doc("vendinator")
-    .collection("vends")
-    .doc(vendId)
-    .get();
+  const vendDoc = global.vendDoc;
+  const vendlyDoc = global.vendlyDoc;
   if (vendDoc.exists) {
     console.log("vend doc exists");
   } else {
     console.log("vend doc doesn't exist");
   }
-  if (vendlyDoc.exists) {
-    console.log("vendly doc exists");
-  } else {
-    console.log("vendly doc doesn't exist");
-  }
+
   const vendlyDocCreateTime = vendlyDoc.createTime;
   const vendDocUpdateTime = vendDoc.updateTime;
   let timeCheck = vendlyDocCreateTime.isEqual(vendDocUpdateTime);
@@ -183,14 +192,8 @@ const handleTransactionDocumentTransmission = async (transmission) => {
   }
 };
 
-const checkVendSessionStatusIsWon = async (vendId, claimantId) => {
-  const vendSessionDoc = await firestoreDb
-    .collection("vends")
-    .doc(vendId)
-    .collection("sessions")
-    .doc(claimantId)
-    .get();
-  // #TODO  update here
+const checkVendSessionStatusIsWon = async () => {
+  const vendSessionDoc = global.vendSessionDoc;
 
   const vendSessionDocData = vendSessionDoc.data();
 
@@ -199,33 +202,14 @@ const checkVendSessionStatusIsWon = async (vendId, claimantId) => {
   }
   return false;
 };
-const checkForUserInStrap = async (strapType, strapId, vendId) => {
-  const strapDoc = await firestoreDb
-    .collection("vends")
-    .doc(vendId)
-    .collection("straps")
-    .doc("meta")
-    .collection(strapType)
-    .doc(strapId)
-    .get();
-  // #TODO  update here
-
-  if (!strapDoc.exists) {
+const checkForUserInStrap = async () => {
+  if (!global.strapDoc.exists) {
     return false;
   }
   return true;
 };
-const checkForValueOfIsWonInUserStrap = async (strapType, strapId, vendId) => {
-  const strapDoc = await firestoreDb
-    .collection("vends")
-    .doc(vendId)
-    .collection("straps")
-    .doc("meta")
-    .collection(strapType)
-    .doc(strapId)
-    .get();
-  const strapData = strapDoc.data();
-  // #TODO  update here
+const checkForValueOfIsWonInUserStrap = async () => {
+  const strapData = global.strapDoc.data();
 
   return strapData.isWon;
 };
@@ -245,7 +229,7 @@ exports.pay = functions
     global.triggerDocument = transactionDocument;
     const booleanObjectId = transactionDocument.concat;
     global.booleanObjectId = booleanObjectId;
-    // #TODO  update here
+    await loadlAllDocs();
 
     const booleanObjectRef = ref.child(
       `vends/${transactionDocument.vend}/knocks/attempts/${booleanObjectId}/subvend/backend`
@@ -254,14 +238,12 @@ exports.pay = functions
 
     console.log("boolean id " + booleanObjectId);
     try {
-      const vendDoc = await firestoreDb
-        .collection("vends")
-        .doc(`${transactionDocument.vend}`)
-        .get();
-      const vendDocResult = vendDoc.data();
-      global.vendDoc = vendDocResult;
+      console.log("checking vend doc");
+      console.log(global.vendDoc);
+      const vendDocResult = global.vendDoc.data();
+      global.vendDocData = vendDocResult;
 
-      const booleanRef = await booleanObjectRef.once("value");
+      const booleanRef = global.booleanObjectDoc;
       const booleanObject = booleanRef.val();
       if (!booleanObject.boolean) {
         const timestamp = Date.now();
@@ -319,11 +301,7 @@ exports.pay = functions
       }
       console.log("Vend Active!");
       if (vendDocResult.type == "gift" || vendDocResult.type == "money") {
-        const userInStrap = await checkForUserInStrap(
-          transactionDocument.strapType,
-          transactionDocument.claimant.strapID,
-          transactionDocument.vend
-        );
+        const userInStrap = await checkForUserInStrap();
 
         if (!userInStrap) {
           const timestamp = Date.now();
@@ -350,11 +328,7 @@ exports.pay = functions
           await booleanObjectRef.update({boolean: false});
           return;
         }
-        const strapIsWonValue = await checkForValueOfIsWonInUserStrap(
-          transactionDocument.strapType,
-          transactionDocument.claimant.strapID,
-          transactionDocument.vend
-        );
+        const strapIsWonValue = await checkForValueOfIsWonInUserStrap();
 
         if (strapIsWonValue) {
           console.log("User has already won");
@@ -463,10 +437,7 @@ exports.pay = functions
         vendDocUpdateTime: formattedVenDocDate,
         vendlyCreateTime: formattedVendlyDocDate,
       });
-      const vendSessionStatusCheck = await checkVendSessionStatusIsWon(
-        transactionDocument.vend,
-        transactionDocument.claimant.uid
-      );
+      const vendSessionStatusCheck = await checkVendSessionStatusIsWon();
 
       if (!vendSessionStatusCheck) {
         const timestamp = Date.now();

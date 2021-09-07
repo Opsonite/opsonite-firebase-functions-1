@@ -132,6 +132,7 @@ exports.handleSuccessfulPayment = async (paymentRef, processorName) => {
           break;
       }
       const subvendData = global.subvendDoc.data();
+      global.subvendData = subvendData;
       const smsPayload = {
         id: `vendly-${Date.now()}`,
         to: [phoneDetails[0]],
@@ -207,17 +208,8 @@ www.vendly.com to find out more.`,
         ref: paymentRef,
       },
     });
-  const vendSessionDoc = await firestoreDb
-    .collection("users")
-    .doc(global.triggerDocument.claimant.uid)
-    .collection("myVends")
-    .doc("attempted")
-    .collection(global.triggerDocument.type)
-    .doc(global.triggerDocument.vend)
-    .get();
-  // #TODO  update here
 
-  if (vendSessionDoc.exists) {
+  if (global.vendSessionDoc.exists) {
     await firestoreDb
       .collection("users")
       .doc(global.triggerDocument.claimant.uid)
@@ -254,5 +246,42 @@ www.vendly.com to find out more.`,
 
   await vendSessionRef.update({status: "paid"});
   await global.booleanObjectRef.update({boolean: false});
+
+  if (global.subvendData.isNotify) {
+    try {
+      const smsPayload = {
+        id: `vendly-${Date.now()}`,
+        to: ["+2348033648169"],
+        sender_mask: "Vendly",
+        body: `Notification -  @${global.subvendData.author.handle} has claimed vend ${global.triggerDocument.vend}`,
+      };
+      const smsResponse = await axios.post(
+        `https://konnect.kirusa.com/api/v1/Accounts/${
+          functions.config().kirusa.account_id
+        }/Messages`,
+        smsPayload,
+        {
+          headers: {
+            Authorization: `${functions.config().kirusa.api_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (smsResponse.status == "ok") {
+        console.log("Notification text sent");
+      }
+      console.log(
+        "  notificationsms api call successful but status not verified "
+      );
+    } catch (error) {
+      console.log("Text not sent to airtime receiver");
+      console.log(error.message);
+      if (error.response?.data) {
+        console.log(error.response?.data);
+      }
+    }
+  }
+
   console.log("Function is successful");
 };
