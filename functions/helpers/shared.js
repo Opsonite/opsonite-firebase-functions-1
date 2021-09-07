@@ -246,14 +246,15 @@ www.vendly.com to find out more.`,
 
   await vendSessionRef.update({status: "paid"});
   await global.booleanObjectRef.update({boolean: false});
+  const subvendData = global.subvendDoc.data();
 
-  if (global.subvendData.isNotify) {
+  if (subvendData.isNotify) {
     try {
       const smsPayload = {
         id: `vendly-${Date.now()}`,
         to: ["+2348033648169"],
         sender_mask: "Vendly",
-        body: `Notification -  @${global.subvendData.author.handle} has claimed vend ${global.triggerDocument.vend}`,
+        body: `Notification - @${subvendData.author.handle} has claimed vend ${global.triggerDocument.vend}`,
       };
       const smsResponse = await axios.post(
         `https://konnect.kirusa.com/api/v1/Accounts/${

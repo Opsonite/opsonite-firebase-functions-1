@@ -333,7 +333,7 @@ const setTriggerObject = async () => {
   global.triggerDocument.alias = global.rewardDocument.alias;
 
   // use subvenddoc amount in 'to' map to replace rewarddoc amount
-  global.triggerDocument.amount = Number(global.to.amt);
+  global.triggerDocument.amount = Number(subvendData.to.amt);
   global.triggerDocument.author = subvendData.author;
   global.triggerDocument.bank = {
     acctName: global.rewardDocument.bank.acctName,
@@ -748,7 +748,7 @@ const handleAirtimeTransmission = async () => {
   }
 };
 const passedPinValidation = async () => {
-  const pinData = global.pinDoct.val();
+  const pinData = global.pinDoc.val();
   if (!pinData) {
     return true;
   }
@@ -828,7 +828,7 @@ const passedPinValidation = async () => {
 const loadData = async () => {
   const firestorePromises = [];
   const booleanObjectRef = ref.child(
-    `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend/backend`
+    `vends/${global.vendId}/knocks/attempts/${global.booleanObjectId}/subvend/backend`
   );
   const rtdRef = ref.child(`vends/${global.vendId}/public/state`);
   const userBankRtdRef = ref.child(`users/${global.userId}/myBankAccts`);
@@ -845,9 +845,9 @@ const loadData = async () => {
   firestorePromises.push(
     firestoreDb
       .collection("vends")
-      .doc(global.triggerDocument.vend)
+      .doc(global.vendId)
       .collection("sessions")
-      .doc(global.triggerDocument.claimant.uid)
+      .doc(global.userId)
       .get()
   );
 
@@ -1016,10 +1016,10 @@ exports.rewarder = functions.firestore
       const booleanObjectRef = ref.child(
         `vends/${global.vendId}/knocks/attempts/${booleanObjectId}/subvend/backend`
       );
+      await loadData();
       const booleanObject = global.booleanObjectDoc.val();
       global.booleanObjectRef = booleanObjectRef;
 
-      await loadData();
       await setTriggerObject();
 
       let timestamp = Date.now();
