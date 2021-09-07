@@ -86,6 +86,8 @@ const queueingSuccess = async (amount) => {
     .collection("vault");
 
   const vaultDoc = await global.vaultDocRef.get();
+  // #TODO  update here
+
   const vaultData = {};
   vaultDoc.forEach((doc) => {
     vaultData[doc.id] = doc.data();

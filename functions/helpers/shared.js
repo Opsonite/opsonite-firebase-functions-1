@@ -215,6 +215,7 @@ www.vendly.com to find out more.`,
     .collection(global.triggerDocument.type)
     .doc(global.triggerDocument.vend)
     .get();
+  // #TODO  update here
 
   if (vendSessionDoc.exists) {
     await firestoreDb

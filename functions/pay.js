@@ -22,10 +22,119 @@ const checkVendActiveStatus = async (vendDocResult) => {
   return false;
 };
 
+const loadlAllDocs = async () => {
+  const firestorePromises = [];
+  const rtdPromises = [];
+  const booleanObjectRef = ref.child(
+    `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend/backend`
+  );
+  const conversionRef = ref.child(
+    `institutions/${global.triggerDocument.defaultCurrency}/exRates/${global.triggerDocument.currency}`
+  );
+
+  // vendDoc
+  firestorePromises.push(
+    firestoreDb.collection("vends").doc(global.triggerDocument.vend).get()
+  );
+
+  // vendlyDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vendly")
+      .doc("vendinator")
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .get()
+  );
+
+  // vendlyDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vendly")
+      .doc("vendinator")
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .get()
+  );
+
+  // vendSessionDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .collection("sessions")
+      .doc(global.triggerDocument.claimant.uid)
+      .get()
+  );
+
+  // attemptedVendSessionDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("users")
+      .doc(global.triggerDocument.claimant.uid)
+      .collection("myVends")
+      .doc("attempted")
+      .collection(global.triggerDocument.type)
+      .doc(global.triggerDocument.vend)
+      .get()
+  );
+
+  // strapDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .collection("straps")
+      .doc("meta")
+      .collection(global.triggerDocument.strapType)
+      .doc(global.triggerDocument.claimant.strapID)
+      .get()
+  );
+
+  // vaultDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .collection("vault")
+  );
+
+  // subvendDoc
+  firestorePromises.push(
+    firestoreDb
+      .collection("vends")
+      .doc(global.triggerDocument.vend)
+      .collection("sessions")
+      .doc(global.triggerDocument.claimant.uid)
+      .collection("subVend")
+      .doc(global.triggerDocument.subvend)
+      .get()
+  );
+
+  // charityDoc;
+  firestorePromises.push(
+    firestoreDb
+      .collection("charities")
+      .doc(global.triggerDocument.charity)
+      .get()
+  );
+
+  rtdPromises.push(booleanObjectRef.once("value"));
+  rtdPromises.push(conversionRef.once("value"));
+
+  try {
+    Promise.all(firestorePromises);
+  } catch (error) {
+    console.log(error);
+    throw Error("error performing initital read");
+  }
+};
+
 const checkVendDocumentHasBeenTampered = async (vendId) => {
   console.log("checking if  vend has been tampered");
   console.log("vendId is " + vendId);
   const vendDoc = await firestoreDb.collection("vends").doc(`${vendId}`).get();
+  // #TODO  update here
   const vendlyDoc = await firestoreDb
     .collection("vendly")
     .doc("vendinator")
@@ -81,6 +190,8 @@ const checkVendSessionStatusIsWon = async (vendId, claimantId) => {
     .collection("sessions")
     .doc(claimantId)
     .get();
+  // #TODO  update here
+
   const vendSessionDocData = vendSessionDoc.data();
 
   if (vendSessionDocData.state == "won") {
@@ -97,6 +208,8 @@ const checkForUserInStrap = async (strapType, strapId, vendId) => {
     .collection(strapType)
     .doc(strapId)
     .get();
+  // #TODO  update here
+
   if (!strapDoc.exists) {
     return false;
   }
@@ -112,6 +225,7 @@ const checkForValueOfIsWonInUserStrap = async (strapType, strapId, vendId) => {
     .doc(strapId)
     .get();
   const strapData = strapDoc.data();
+  // #TODO  update here
 
   return strapData.isWon;
 };
@@ -131,6 +245,8 @@ exports.pay = functions
     global.triggerDocument = transactionDocument;
     const booleanObjectId = transactionDocument.concat;
     global.booleanObjectId = booleanObjectId;
+    // #TODO  update here
+
     const booleanObjectRef = ref.child(
       `vends/${transactionDocument.vend}/knocks/attempts/${booleanObjectId}/subvend/backend`
     );

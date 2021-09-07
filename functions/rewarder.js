@@ -229,6 +229,7 @@ const giftCardValidationPassed = async () => {
     .doc(global.subvendId)
     .get();
   const subvendData = subvendDoc.data();
+
   if (
     subvendData.giftCard?.currency != global.rewardDocument.currency ||
     subvendData.giftCard?.country != global.rewardDocument.country ||
@@ -368,7 +369,9 @@ const setTriggerObject = async () => {
     vend: null,
   };
   global.triggerDocument.alias = global.rewardDocument.alias;
-  global.triggerDocument.amount = Number(global.rewardDocument.amount);
+
+  // use subvenddoc amount in 'to' map to replace rewarddoc amount
+  global.triggerDocument.amount = Number(global.to.amt);
   global.triggerDocument.author = subvendData.author;
   global.triggerDocument.bank = {
     acctName: global.rewardDocument.bank.acctName,
@@ -380,9 +383,26 @@ const setTriggerObject = async () => {
     strapID: subvendData.claimant.strap,
     uid: subvendData.claimant.uid,
   };
+
+  let currency;
+  switch (global.rewardDocument.transmission) {
+    case "revend":
+      currency = subvendData.currency;
+
+      break;
+    case "gfitCard":
+      currency = subvendData.currency;
+
+      break;
+
+    default:
+      currency = global.rewardDocument.currency;
+      break;
+  }
+
   global.triggerDocument.concat = global.booleanObjectId;
   global.triggerDocument.country = global.rewardDocument.country;
-  global.triggerDocument.currency = global.rewardDocument.currency;
+  global.triggerDocument.currency = currency;
   global.triggerDocument.defaultCurrency = subvendData.currency;
   global.triggerDocument.domain = subvendData.domain;
   if (!global.rewardDocument.email) {
@@ -394,9 +414,13 @@ const setTriggerObject = async () => {
   } else {
     global.triggerDocument.email = global.rewardDocument.email;
   }
+
+  // for revend fetch currency from subvend doc
+
+  // add amount from gift cardequiv to giftcard
   global.triggerDocument.giftCard = {
     amount: Number(
-      subvendData.giftCardEquiv[global.rewardDocument.currency]?.amount_
+      subvendData.giftCardEquiv[global.rewardDocument.currency]?.amount
     ),
     id: global.rewardDocument.giftCard,
   };

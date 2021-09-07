@@ -24,6 +24,8 @@ exports.handleBankTransmission = async () => {
   );
 
   let conversionRate = await conversionRef.once("value");
+  // #TODO  update here
+
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
@@ -32,6 +34,8 @@ exports.handleBankTransmission = async () => {
   let reference = `${global.triggerDocument.vend}_${Date.now()}`;
   reference = reference.toLowerCase();
   console.log(`Country is ${global.triggerDocument.country}`);
+  // #TODO  update here
+
   const subvendRef = firestoreDb
     .collection("vends")
     .doc(global.triggerDocument.vend)
@@ -72,6 +76,8 @@ exports.handleBankTransmission = async () => {
       break;
     }
     case "GH": {
+      // #TODO  update here
+
       const subvendDoc = await firestoreDb
         .collection("vends")
         .doc(global.triggerDocument.vend)
@@ -121,6 +127,8 @@ exports.handleCharityTransmission = async () => {
     .collection("charities")
     .doc(global.triggerDocument.charity)
     .get();
+  // #TODO  update here
+
   const charityData = charityDoc.data();
 
   const conversionRef = ref.child(
@@ -128,6 +136,8 @@ exports.handleCharityTransmission = async () => {
   );
 
   const conversionReference = await conversionRef.once("value");
+  // #TODO  update here
+
   const conversionRate = conversionReference.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/bank/charges`
@@ -148,6 +158,8 @@ exports.handleCharityTransmission = async () => {
         .collection("subVend")
         .doc(global.triggerDocument.subvend)
         .get();
+      // #TODO  update here
+
       global.subvendDoc = subvendDoc;
       const subvendData = subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -202,6 +214,8 @@ exports.handleCharityTransmission = async () => {
         .collection("subVend")
         .doc(global.triggerDocument.subvend)
         .get();
+      // #TODO  update here
+
       global.subvendDoc = subvendDoc;
       const subvendData = subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -248,6 +262,8 @@ exports.handleCharityTransmission = async () => {
         .collection("subVend")
         .doc(global.triggerDocument.subvend)
         .get();
+      // #TODO  update here
+
       global.subvendDoc = subvendDoc;
       const subvendData = subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -294,6 +310,8 @@ exports.handleCharityTransmission = async () => {
         .collection("subVend")
         .doc(global.triggerDocument.subvend)
         .get();
+      // #TODO  update here
+
       global.subvendDoc = subvendDoc;
       const subvendData = subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -340,6 +358,8 @@ exports.handleCharityTransmission = async () => {
         .collection("subVend")
         .doc(global.triggerDocument.subvend)
         .get();
+      // #TODO  update here
+
       global.subvendDoc = subvendDoc;
       const subvendData = subvendDoc.data();
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -393,6 +413,8 @@ exports.handleMobileMoneyTransmission = async () => {
   );
 
   let conversionRate = await conversionRef.once("value");
+  // #TODO  update here
+
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
@@ -491,6 +513,8 @@ exports.handleAirtimeTransmission = async () => {
   );
 
   let conversionRate = await conversionRef.once("value");
+  // #TODO  update here
+
   conversionRate = conversionRate.val();
   const chargeDocumentRef = ref.child(
     `institutions/${global.triggerDocument.currency}/${global.triggerDocument.transmission}/charges`
@@ -556,6 +580,8 @@ exports.handleGiftCardTransmission = async () => {
   );
 
   let authorData = await authorRef.once("value");
+  // #TODO  update here
+
   authorData = authorData.val();
   const giftCardPayload = {
     countryCode: global.triggerDocument.country,
