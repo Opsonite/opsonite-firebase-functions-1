@@ -26,6 +26,121 @@ exports.logErrorInCollection = async (
     .doc(logKey)
     .set(data);
 };
+
+exports.sendSmsToUser = async () => {
+  if (global.triggerDocument.transmission == "airtime") {
+    const timestamp = Date.now();
+    const fireStoreDate = admin.firestore.Timestamp.fromDate(
+      new Date(timestamp)
+    );
+    try {
+      const phoneDetails = global.triggerDocument.phoneRef.split("_");
+      let currency;
+
+      switch (global.triggerDocument.country) {
+        case "NG":
+          currency = "N";
+
+          break;
+        case "GH":
+          currency = "GHC";
+
+          break;
+        case "KE":
+          currency = "KSH";
+
+          break;
+        case "UG":
+          currency = "USH";
+
+          break;
+
+        default:
+          break;
+      }
+
+      const smsPayload = {
+        id: `vendly-${Date.now()}`,
+        to: [phoneDetails[0]],
+        sender_mask: "Vendly",
+        body: `Hi there, you have just received ${currency}${global.airtimeAmount} amount of
+airtime from @${global.subvendData.author.handle} through Vendly. Visit
+www.vendly.com to find out more.`,
+      };
+      const smsResponse = await axios.post(
+        `https://konnect.kirusa.com/api/v1/Accounts/${
+          functions.config().kirusa.account_id
+        }/Messages`,
+        smsPayload,
+        {
+          headers: {
+            Authorization: `${functions.config().kirusa.api_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (smsResponse.data.status == "ok") {
+        console.log("Text sent to airtime receiver");
+      }
+      console.log(" sms api call successful but status not verified ");
+    } catch (error) {
+      console.log("Text not sent to airtime receiver");
+      console.log(error.message);
+      if (error.response?.data) {
+        console.log(error.response?.data);
+      }
+    }
+    await firestoreDb
+      .collection("processors")
+      .doc("paystack")
+      .collection("transferSuccess")
+      .doc(
+        `${global.triggerDocument.vend}_${global.triggerDocument.claimant.uid}`
+      )
+      .set({
+        createdAt: fireStoreDate,
+      });
+  }
+};
+exports.sendSmsToOwner = async () => {
+  if (global.subvendData.isNotify) {
+    try {
+      const smsPayload = {
+        id: `vendly-${Date.now()}`,
+        to: ["+2348033648169"],
+        sender_mask: "Vendly",
+        body: `Notification - @${global.subvendData.author.handle} has claimed vend ${global.triggerDocument.vend}`,
+      };
+      const smsResponse = await axios.post(
+        `https://konnect.kirusa.com/api/v1/Accounts/${
+          functions.config().kirusa.account_id
+        }/Messages`,
+        smsPayload,
+        {
+          headers: {
+            Authorization: `${functions.config().kirusa.api_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (smsResponse.data.status == "ok") {
+        console.log("Notification text sent");
+      }
+      console.log(
+        "  notification sms api call successful but status not verified "
+      );
+    } catch (error) {
+      console.log("Text not sent to airtime receiver");
+      console.log(error.message);
+      if (error.response?.data) {
+        console.log(error.response?.data);
+      }
+    }
+  }
+  return;
+};
 exports.generateRandomNumber = () => {
   return parseInt(Math.floor(Math.random() * 100));
 };
@@ -105,77 +220,7 @@ exports.handleSuccessfulPayment = async (paymentRef, processorName) => {
     .update({
       count: admin.firestore.FieldValue.increment(1),
     });
-  if (global.triggerDocument.transmission == "airtime") {
-    try {
-      const phoneDetails = global.triggerDocument.phoneRef.split("_");
-      let currency;
 
-      switch (global.triggerDocument.country) {
-        case "NG":
-          currency = "N";
-
-          break;
-        case "GH":
-          currency = "GHC";
-
-          break;
-        case "KE":
-          currency = "KSH";
-
-          break;
-        case "UG":
-          currency = "USH";
-
-          break;
-
-        default:
-          break;
-      }
-      const subvendData = global.subvendDoc.data();
-      global.subvendData = subvendData;
-      const smsPayload = {
-        id: `vendly-${Date.now()}`,
-        to: [phoneDetails[0]],
-        sender_mask: "Vendly",
-        body: `Hi there, you have just received ${currency}${global.airtimeAmount} amount of
-airtime from @${subvendData.author.handle} through Vendly. Visit
-www.vendly.com to find out more.`,
-      };
-      const smsResponse = await axios.post(
-        `https://konnect.kirusa.com/api/v1/Accounts/${
-          functions.config().kirusa.account_id
-        }/Messages`,
-        smsPayload,
-        {
-          headers: {
-            Authorization: `${functions.config().kirusa.api_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (smsResponse.status == "ok") {
-        console.log("Text sent to airtime receiver");
-      }
-      console.log(" sms api call successful but status not verified ");
-    } catch (error) {
-      console.log("Text not sent to airtime receiver");
-      console.log(error.message);
-      if (error.response?.data) {
-        console.log(error.response?.data);
-      }
-    }
-    await firestoreDb
-      .collection("processors")
-      .doc("paystack")
-      .collection("transferSuccess")
-      .doc(
-        `${global.triggerDocument.vend}_${global.triggerDocument.claimant.uid}`
-      )
-      .set({
-        createdAt: fireStoreDate,
-      });
-  }
   await firestoreDb
     .collection("users")
     .doc(global.triggerDocument.claimant.uid)
@@ -246,43 +291,6 @@ www.vendly.com to find out more.`,
 
   await vendSessionRef.update({status: "paid"});
   await global.booleanObjectRef.update({boolean: false});
-  const subvendData = global.subvendDoc.data();
-
-  if (subvendData.isNotify) {
-    try {
-      const smsPayload = {
-        id: `vendly-${Date.now()}`,
-        to: ["+2348033648169"],
-        sender_mask: "Vendly",
-        body: `Notification - @${subvendData.author.handle} has claimed vend ${global.triggerDocument.vend}`,
-      };
-      const smsResponse = await axios.post(
-        `https://konnect.kirusa.com/api/v1/Accounts/${
-          functions.config().kirusa.account_id
-        }/Messages`,
-        smsPayload,
-        {
-          headers: {
-            Authorization: `${functions.config().kirusa.api_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (smsResponse.status == "ok") {
-        console.log("Notification text sent");
-      }
-      console.log(
-        "  notificationsms api call successful but status not verified "
-      );
-    } catch (error) {
-      console.log("Text not sent to airtime receiver");
-      console.log(error.message);
-      if (error.response?.data) {
-        console.log(error.response?.data);
-      }
-    }
-  }
 
   console.log("Function is successful");
 };

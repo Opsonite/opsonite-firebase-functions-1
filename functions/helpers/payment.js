@@ -236,6 +236,7 @@ exports.makePaystackPayment = async (
       `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend`
     );
     await subVendRef.update({status: false});
+    await handleSuccessfulPayment("", "Paystack");
     return;
   }
   if (global.paymentTries == 0) {
@@ -293,7 +294,10 @@ exports.makePaystackPayment = async (
 
       return;
     }
-    console.log("No error in payment but ccouldn't verify status");
+    console.log(
+      "No error in payment but couldn't verify status,returned payload is shown below"
+    );
+    console.log(initiateTransferResponse.data);
     await global.booleanObjectRef.update({boolean: false});
 
     return;
@@ -337,6 +341,7 @@ exports.makePaystackPayment = async (
         data,
         `${timestamp}_paid`
       );
+      await handleSuccessfulPayment("", "Paystack");
 
       return;
     }
@@ -384,6 +389,8 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
       `vends/${global.triggerDocument.vend}/knocks/attempts/${global.booleanObjectId}/subvend`
     );
     await subVendRef.update({status: false});
+    await handleSuccessfulPayment("", "Flutterwave");
+
     return;
   }
   if (global.paymentTries == 0) {
@@ -421,7 +428,11 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
       return;
     }
     await global.booleanObjectRef.update({boolean: false});
-    console.log("No error in payment but couldn't verify status");
+    console.log(
+      "No error in payment but couldn't verify status,returned payload is shown below"
+    );
+    console.log(initiateTransferResponse.data);
+
     return;
   } catch (error) {
     console.log("flutterwave bank error");
@@ -463,6 +474,8 @@ exports.makeFlutterwaveBankPayment = async (initiateTransferPayload, retry) => {
         data,
         `${timestamp}_paid`
       );
+
+      await handleSuccessfulPayment("", "Flutterwave");
 
       return;
     }
@@ -514,7 +527,10 @@ exports.makeFlutterwaveAirtimePayment = async (initiateTransferPayload) => {
     }
     await global.booleanObjectRef.update({boolean: false});
 
-    console.log("No error in payment but couldn't verify status");
+    console.log(
+      "No error in payment but couldn't verify status,returned payload is shown below"
+    );
+    console.log(initiateTransferResponse.data);
     return;
   } catch (error) {
     console.log("flutterwave airtime call error");
@@ -524,6 +540,8 @@ exports.makeFlutterwaveAirtimePayment = async (initiateTransferPayload) => {
     if (error.response?.data) {
       console.log(error.response?.data);
     }
+    await handleSuccessfulPayment("", "Flutterwave");
+
     if (
       error.response?.data?.message?.includes("insufficient") ||
       error.response?.data?.message?.includes("Insufficient")
@@ -659,7 +677,10 @@ exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
       console.log("Payment success");
       return;
     }
-    console.log("No error in payment but couldn't verify status");
+    console.log(
+      "No error in payment but couldn't verify status,payload is shwon below"
+    );
+    console.log(initiateTransferResponse.data);
     return;
   } catch (error) {
     console.log("Airtime payment failed");
@@ -691,7 +712,7 @@ exports.makeReloadlyAirtimePayment = async (initiateTransferPayload) => {
       errorData,
       `${timestamp}_paid`
     );
-
+    await handleSuccessfulPayment("", "Reloadly");
     return;
   }
 };
@@ -761,7 +782,10 @@ exports.makeReloadlyGiftCardPayment = async (giftCardPayload) => {
       console.log("Payment success");
       return;
     }
-    console.log("No error in payment but couldn't verify status");
+    console.log(
+      "No error in payment but couldn't verify status,payload is shown below"
+    );
+    console.log(giftCardResponse.data);
     return;
   } catch (error) {
     console.log("gift card payment failed");
@@ -791,6 +815,7 @@ exports.makeReloadlyGiftCardPayment = async (giftCardPayload) => {
       errorData,
       `${timestamp}_paid`
     );
+    await handleSuccessfulPayment("", "Reloadly");
 
     return;
   }

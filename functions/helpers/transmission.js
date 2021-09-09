@@ -10,6 +10,8 @@ const {
   makeFlutterwaveBankPayment,
   makeFlutterwaveAirtimePayment,
   makeReloadlyGiftCardPayment,
+  sendSmsToUser,
+  sendSmsToOwner,
   makeReloadlyAirtimePayment,
 } = require("./payment");
 const {logErrorInCollection, handleSuccessfulPayment} = require("./shared");
@@ -54,12 +56,20 @@ exports.handleBankTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makePaystackPayment(
-        createTransferRecepientPayload,
-        initiateTransferPayload,
-        true
-      );
-      break;
+      const promises = [
+        makePaystackPayment(
+          createTransferRecepientPayload,
+          initiateTransferPayload,
+          true
+        ),
+        sendSmsToOwner(),
+      ];
+      try {
+        return await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
     }
     case "GH": {
       const subvendData = global.subvendDoc.data();
@@ -85,9 +95,16 @@ exports.handleBankTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-
-      break;
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        return await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
     }
     default:
       throw Error("Invalid country for bank");
@@ -138,11 +155,20 @@ exports.handleCharityTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makePaystackPayment(
-        createTransferRecepientPayload,
-        initiateTransferPayload,
-        true
-      );
+      const promises = [
+        makePaystackPayment(
+          createTransferRecepientPayload,
+          initiateTransferPayload,
+          true
+        ),
+        sendSmsToOwner(),
+      ];
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
       await firestoreDb
         .collection("charities")
         .doc(global.triggerDocument.charity)
@@ -179,7 +205,16 @@ exports.handleCharityTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
       await firestoreDb
         .collection("charities")
         .doc(global.triggerDocument.charity)
@@ -216,7 +251,16 @@ exports.handleCharityTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
       await firestoreDb
         .collection("charities")
         .doc(global.triggerDocument.charity)
@@ -253,7 +297,16 @@ exports.handleCharityTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
       await firestoreDb
         .collection("charities")
         .doc(global.triggerDocument.charity)
@@ -290,7 +343,17 @@ exports.handleCharityTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
+
       await firestoreDb
         .collection("charities")
         .doc(global.triggerDocument.charity)
@@ -344,9 +407,16 @@ exports.handleMobileMoneyTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-
-      break;
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        return await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
     }
     case "KE": {
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -368,9 +438,16 @@ exports.handleMobileMoneyTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-
-      break;
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        return await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
     }
     case "UG": {
       const {evaluatedAmount} = await calculateChargeAmount(
@@ -392,15 +469,21 @@ exports.handleMobileMoneyTransmission = async () => {
       };
       global.paymentTries = 0;
 
-      await makeFlutterwaveBankPayment(initiateTransferPayload, true);
-
-      break;
+      const promises = [
+        makeFlutterwaveBankPayment(initiateTransferPayload, true),
+        sendSmsToOwner(),
+      ];
+      try {
+        return await Promise.all(promises);
+      } catch (error) {
+        console.log("error resolving payment promises");
+        throw error;
+      }
     }
 
     default:
       throw Error("Unsupported country");
   }
-  return;
 };
 
 exports.handleAirtimeTransmission = async () => {
@@ -441,7 +524,17 @@ exports.handleAirtimeTransmission = async () => {
       type: "AIRTIME",
       recurrence: "ONCE",
     };
-    await makeFlutterwaveAirtimePayment(initiateTransferPayload);
+    const promises = [
+      makeFlutterwaveAirtimePayment(initiateTransferPayload),
+      sendSmsToUser(),
+      sendSmsToOwner(),
+    ];
+    try {
+      return await Promise.all(promises);
+    } catch (error) {
+      console.log("error resolving payment promises");
+      throw error;
+    }
   }
   if (["ZA", "KE", "UG", "GH"].includes(global.triggerDocument.country)) {
     const {evaluatedAmount} = await calculateChargeAmount(
@@ -461,21 +554,26 @@ exports.handleAirtimeTransmission = async () => {
         number: phoneDetails[0],
       },
     };
-    await makeReloadlyAirtimePayment(initiateTransferPayload);
+
+    const promises = [
+      makeReloadlyAirtimePayment(initiateTransferPayload),
+      sendSmsToUser(),
+      sendSmsToOwner(),
+    ];
+    try {
+      return await Promise.all(promises);
+    } catch (error) {
+      console.log("error resolving payment promises");
+      throw error;
+    }
   }
 };
 exports.handleGiftCardTransmission = async () => {
   if (!global.triggerDocument) {
     throw Error("trigger document is not set");
   }
-  const authorRef = ref.child(
-    `vends/${global.triggerDocument.vend}/public/author/vendle`
-  );
 
-  let authorData = await authorRef.once("value");
-  // #TODO  update here
-
-  authorData = authorData.val();
+  const authorData = global.authorDoc.val();
   const giftCardPayload = {
     countryCode: global.triggerDocument.country,
     email: global.triggerDocument.email,
@@ -487,7 +585,16 @@ exports.handleGiftCardTransmission = async () => {
     quantity: 1,
     unitPrice: Number(global.triggerDocument.giftCard.amount),
   };
-  await makeReloadlyGiftCardPayment(giftCardPayload);
+  const promises = [
+    makeReloadlyGiftCardPayment(giftCardPayload),
+    sendSmsToOwner(),
+  ];
+  try {
+    return await Promise.all(promises);
+  } catch (error) {
+    console.log("error resolving payment promises");
+    throw error;
+  }
 };
 
 exports.handleRevendTransmission = async () => {

@@ -28,7 +28,9 @@ const loadlAllDocs = async () => {
   const conversionRef = ref.child(
     `institutions/${global.triggerDocument.defaultCurrency}/exRates/${global.triggerDocument.currency}`
   );
-
+  const authorRef = ref.child(
+    `vends/${global.triggerDocument.vend}/public/author/vendle`
+  );
   // vendDoc
   firestorePromises.push(
     firestoreDb.collection("vends").doc(global.triggerDocument.vend).get()
@@ -117,6 +119,7 @@ const loadlAllDocs = async () => {
   // rtd
   firestorePromises.push(booleanObjectRef.once("value"));
   firestorePromises.push(conversionRef.once("value"));
+  firestorePromises.push(authorRef.once("value"));
 
   try {
     const [
@@ -130,6 +133,7 @@ const loadlAllDocs = async () => {
       charityDoc,
       booleanObjectDoc,
       conversionRefDoc,
+      authorDoc,
     ] = await Promise.all(firestorePromises);
     global.vendDoc = vendDoc;
     global.vendlyDoc = vendlyDoc;
@@ -143,6 +147,9 @@ const loadlAllDocs = async () => {
     global.conversionRefDoc = conversionRefDoc;
     global.booleanObjectDoc = booleanObjectDoc;
     global.conversionRefDoc = conversionRefDoc;
+    global.authorDoc = authorDoc;
+
+    global.subvendData = global.subvendDoc.data();
   } catch (error) {
     console.log("error resolving promises");
     throw Error(error);
