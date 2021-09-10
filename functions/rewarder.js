@@ -234,61 +234,66 @@ const setTriggerObject = async () => {
   const resolveData = global.resolveDoc.data();
 
   const userData = global.userDoc.data();
-  if (resolveData.acctName !== global.rewardDocument.bank.acctName) {
-    const timestamp = Date.now();
-    const fireStoreDate = admin.firestore.Timestamp.fromDate(
-      new Date(timestamp)
-    );
-    const data = {
-      message: "trigger document bank name mismatch",
-      timestamp,
-      uid: global.userId,
-      status: 804,
-      critical: true,
-      createdAt: fireStoreDate,
-    };
+  if (global.rewardDocument.transmission == "bank") {
+    if (resolveData.acctName !== global.rewardDocument.bank.acctName) {
+      const timestamp = Date.now();
+      const fireStoreDate = admin.firestore.Timestamp.fromDate(
+        new Date(timestamp)
+      );
+      const data = {
+        message: "trigger document bank name mismatch",
+        timestamp,
+        uid: global.userId,
+        status: 804,
+        critical: true,
+        createdAt: fireStoreDate,
+      };
 
-    await logErrorInCollection(
-      global.vendId,
-      global.userId,
-      global.subvendId,
-      data,
-      `${timestamp}_rewarder`
-    );
-    await global.booleanObjectRef.update({
-      boolean: false,
-      time: timestamp,
-    });
-    console.log("resolve name is:" + resolveData.acctName);
-    console.log("reward name is:" + global.rewardDocument.bank.acctName);
-    throw Error("trigger document bank name mismatch");
+      await logErrorInCollection(
+        global.vendId,
+        global.userId,
+        global.subvendId,
+        data,
+        `${timestamp}_rewarder`
+      );
+      await global.booleanObjectRef.update({
+        boolean: false,
+        time: timestamp,
+      });
+      console.log("resolve name is:" + resolveData.acctName);
+      console.log("reward name is:" + global.rewardDocument.bank.acctName);
+      throw Error("trigger document bank name mismatch");
+    }
   }
-  if (!subvendData.giftCardEquiv[global.rewardDocument.currency]?.amount) {
-    const timestamp = Date.now();
-    const fireStoreDate = admin.firestore.Timestamp.fromDate(
-      new Date(timestamp)
-    );
-    const data = {
-      message: "Gift card currency missing",
-      timestamp,
-      uid: global.userId,
-      status: 804,
-      critical: true,
-      createdAt: fireStoreDate,
-    };
 
-    await logErrorInCollection(
-      global.vendId,
-      global.userId,
-      global.subvendId,
-      data,
-      `${timestamp}_rewarder`
-    );
-    await global.booleanObjectRef.update({
-      boolean: false,
-      time: timestamp,
-    });
-    throw Error("Gift card currency missing");
+  if (global.rewardDocument.transmission == "giftCard") {
+    if (!subvendData.giftCardEquiv[global.rewardDocument.currency]?.amount) {
+      const timestamp = Date.now();
+      const fireStoreDate = admin.firestore.Timestamp.fromDate(
+        new Date(timestamp)
+      );
+      const data = {
+        message: "Gift card currency missing",
+        timestamp,
+        uid: global.userId,
+        status: 804,
+        critical: true,
+        createdAt: fireStoreDate,
+      };
+
+      await logErrorInCollection(
+        global.vendId,
+        global.userId,
+        global.subvendId,
+        data,
+        `${timestamp}_rewarder`
+      );
+      await global.booleanObjectRef.update({
+        boolean: false,
+        time: timestamp,
+      });
+      throw Error("Gift card currency missing");
+    }
   }
   global.triggerDocument = {
     claimant: {
@@ -334,13 +339,19 @@ const setTriggerObject = async () => {
 
   // use subvenddoc amount in 'to' map to replace rewarddoc amount
   global.triggerDocument.amount = Number(subvendData.to.amt);
-  global.triggerDocument.author = subvendData.author;
-  global.triggerDocument.bank = {
-    acctName: global.rewardDocument.bank.acctName,
-    branchCode: global.rewardDocument.bank.branchCode,
-    ref: global.rewardDocument.bank.ref,
-  };
-  global.triggerDocument.charity = global.rewardDocument.charity;
+  global.triggerDocument.author = subvendData.author.uid;
+
+  if (global.rewardDocument.transmission == "bank") {
+    global.triggerDocument.bank = {
+      acctName: global.rewardDocument.bank.acctName,
+      branchCode: global.rewardDocument.bank.branchCode,
+      ref: global.rewardDocument.bank.ref,
+    };
+  }
+
+  if (global.rewardDocument.transmission == "charity") {
+    global.triggerDocument.charity = global.rewardDocument.charity;
+  }
   global.triggerDocument.claimant = {
     strapID: subvendData.claimant.strap,
     uid: subvendData.claimant.uid,
@@ -352,7 +363,7 @@ const setTriggerObject = async () => {
       currency = subvendData.currency;
 
       break;
-    case "gfitCard":
+    case "giftCard":
       currency = subvendData.currency;
 
       break;
@@ -380,12 +391,14 @@ const setTriggerObject = async () => {
   // for revend fetch currency from subvend doc
 
   // add amount from gift cardequiv to giftcard
-  global.triggerDocument.giftCard = {
-    amount: Number(
-      subvendData.giftCardEquiv[global.rewardDocument.currency]?.amount
-    ),
-    id: global.rewardDocument.giftCard,
-  };
+  if (global.rewardDocument.transmission == "giftCard") {
+    global.triggerDocument.giftCard = {
+      amount: Number(
+        subvendData.giftCardEquiv[global.rewardDocument.currency]?.amount
+      ),
+      id: global.rewardDocument.giftCard,
+    };
+  }
 
   global.triggerDocument.name = global.rewardDocument.name;
   global.triggerDocument.operatorID = global.rewardDocument.operatorID;

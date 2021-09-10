@@ -10,10 +10,10 @@ const {
   makeFlutterwaveBankPayment,
   makeFlutterwaveAirtimePayment,
   makeReloadlyGiftCardPayment,
-  sendSmsToUser,
-  sendSmsToOwner,
+
   makeReloadlyAirtimePayment,
 } = require("./payment");
+const {sendSmsToUser, sendSmsToOwner} = require("./shared");
 const {logErrorInCollection, handleSuccessfulPayment} = require("./shared");
 
 exports.handleBankTransmission = async () => {

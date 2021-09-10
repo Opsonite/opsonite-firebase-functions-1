@@ -77,7 +77,10 @@ exports.calculateChargeAmount = async (
   console.log("charge " + chargeAmount);
   console.log("evaluated amount " + evaluatedAmount);
 
-  if (isNaN(chargeAmount) || isNaN(evaluatedAmount)) {
+  if (!chargeAmount || !evaluatedAmount || !conversionRate) {
+    throw Error("error calculating charge amount");
+  }
+  if (isNaN(chargeAmount) || isNaN(evaluatedAmount) || isNaN(conversionRate)) {
     throw Error("error calculating charge amount");
   }
   return {chargeAmount, evaluatedAmount};
@@ -134,6 +137,25 @@ const queueingSuccess = async (amount) => {
 
   global.queueDocId = newQueueDoc.id;
   console.log("Queued but not confirmed");
+
+  let reference;
+  switch (global.triggerDocument.transmission) {
+    case "bank":
+      reference = global.triggerDocument.bank.ref;
+      break;
+    case "charity":
+      reference = global.triggerDocument.charity;
+      break;
+    case "MM":
+      reference = global.triggerDocument.phoneRef;
+      break;
+    case "airtime":
+      reference = global.triggerDocument.phoneRef;
+      break;
+    case "giftCard":
+      reference = global.triggerDocument.claimant.uid;
+      break;
+  }
   const data = {
     message: "success",
     claimantUID: global.triggerDocument.claimant.uid,
@@ -151,10 +173,7 @@ const queueingSuccess = async (amount) => {
           global.triggerDocument.transmission == "bank"
             ? global.triggerDocument.bank.acctName
             : global.triggerDocument.name,
-        reference:
-          global.triggerDocument.transmission == "charity"
-            ? global.triggerDocument.charity
-            : global.triggerDocument.bank.ref,
+        reference: reference,
       },
       recipient: {
         id: global.triggerDocument.claimant.strapID,

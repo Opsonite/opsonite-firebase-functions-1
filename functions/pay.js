@@ -108,46 +108,38 @@ const loadlAllDocs = async () => {
     .collection("subVend")
     .doc(global.triggerDocument.subvend);
 
-  // charityDoc;
-  firestorePromises.push(
-    firestoreDb
-      .collection("charities")
-      .doc(global.triggerDocument.charity)
-      .get()
-  );
-
   // rtd
   firestorePromises.push(booleanObjectRef.once("value"));
   firestorePromises.push(conversionRef.once("value"));
   firestorePromises.push(authorRef.once("value"));
 
+  if (global.triggerDocument.transmission == "charity") {
+    // charityDoc;
+
+    firestorePromises.push(
+      firestoreDb
+        .collection("charities")
+        .doc(global.triggerDocument.charity)
+        .get()
+    );
+  }
+
   try {
-    const [
-      vendDoc,
-      vendlyDoc,
-      vendSessionDoc,
-      attemptedVendSessionDoc,
-      strapDoc,
-      vaultDoc,
-      subvendDoc,
-      charityDoc,
-      booleanObjectDoc,
-      conversionRefDoc,
-      authorDoc,
-    ] = await Promise.all(firestorePromises);
-    global.vendDoc = vendDoc;
-    global.vendlyDoc = vendlyDoc;
-    global.vendSessionDoc = vendSessionDoc;
-    global.attemptedVendSessionDoc = attemptedVendSessionDoc;
-    global.strapDoc = strapDoc;
-    global.vaultDoc = vaultDoc;
-    global.subvendDoc = subvendDoc;
-    global.charityDoc = charityDoc;
-    global.booleanObjectDoc = booleanObjectDoc;
-    global.conversionRefDoc = conversionRefDoc;
-    global.booleanObjectDoc = booleanObjectDoc;
-    global.conversionRefDoc = conversionRefDoc;
-    global.authorDoc = authorDoc;
+    const results = await Promise.all(firestorePromises);
+    global.vendDoc = results[0];
+    global.vendlyDoc = results[1];
+    global.vendSessionDoc = results[2];
+    global.attemptedVendSessionDoc = results[3];
+    global.strapDoc = results[4];
+    global.vaultDoc = results[5];
+    global.subvendDoc = results[6];
+    global.booleanObjectDoc = results[7];
+    global.conversionRefDoc = results[8];
+    global.authorDoc = results[9];
+
+    if (global.triggerDocument.transmission == "charity") {
+      global.charityDoc = results[10];
+    }
 
     global.subvendData = global.subvendDoc.data();
   } catch (error) {
@@ -231,6 +223,8 @@ exports.pay = functions
   .firestore.document("transactions/payouts/records/{trigger}")
   .onCreate(async (snap, context) => {
     const transactionDocument = snap.data();
+    console.log("transactionDoc is");
+    console.log(transactionDocument);
     global.triggerDocId = context.params.trigger;
 
     global.triggerDocument = transactionDocument;
@@ -246,7 +240,6 @@ exports.pay = functions
     console.log("boolean id " + booleanObjectId);
     try {
       console.log("checking vend doc");
-      console.log(global.vendDoc);
       const vendDocResult = global.vendDoc.data();
       global.vendDocData = vendDocResult;
 
