@@ -913,9 +913,14 @@ const loadData = async () => {
   );
 
   // charityDoc
-  firestorePromises.push(
-    firestoreDb.collection("charities").doc(global.rewardDocument.charity).get()
-  );
+  if (global.rewardDocument.transmission == "charity") {
+    firestorePromises.push(
+      firestoreDb
+        .collection("charities")
+        .doc(global.rewardDocument.charity)
+        .get()
+    );
+  }
 
   // subvendDoc
   firestorePromises.push(
